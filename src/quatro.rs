@@ -170,6 +170,7 @@ struct Board {
     /* Only 4x4 board size is allowed */
     board: Vec<Vec<CellState>>,
     available_pieces: Vec<Piece>,
+    next_piece: Option<Piece>
 }
 
 
@@ -216,8 +217,10 @@ impl Board {
         Board {
             board: vec![vec![CellState::None; 4]; 4],
             available_pieces: all_pieces(),
+            next_piece: None,
         }
     }
+
     fn count_elements<S: Clone + Eq + PartialEq + Hash>(
         &self,
         coords: &Vec<(usize, usize)>,
@@ -248,14 +251,29 @@ impl Board {
         (found_none, hmap.len())
     }
 
+    pub fn pick_piece(&mut self, p: &Piece) -> bool {
+        if self.available_pieces.contains(p) {
+            self.available_pieces.retain(|pc| *pc != *p);
+            self.next_piece = Some(p.clone());
+            true
+        } else {
+            false
+        }
+    }
     pub fn move_piece(&mut self, p: Piece, x: usize, y: usize) -> bool {
         if x >= 4 || y >= 4 {
             // Out of board access
             return false;
         }
         if let None = self.board[x][y] {
-            self.available_pieces.retain(|piece| *piece != p);
-            self.board[x][y] = Some(p);
+            if let Some(p) = &self.next_piece {
+                self.board[x][y] = Some(p.clone());
+            } else {
+                self.available_pieces.retain(|piece| *piece != p);
+                self.board[x][y] = Some(p);
+            }
+            self.next_piece = None;
+
             return true;
         } else {
             // A piece already occupies the position
@@ -495,18 +513,64 @@ mod test {
         let board = Board::parse_board_text(&board_text.to_string());
         assert_eq!(board, None)
     }
+
     #[test]
     fn test_empty_board() {
         let dummy_text = indoc! {
         /* - will be replaced to space */
         r#"
-            BSCF ---- ---- ----
+            ---- ---- ---- ----
             ---- ---- ---- ----
             ---- ---- ---- ----
             ---- ---- ---- ----"#};
         let board_text = dummy_text.replace("-", " ");
 
         let board = Board::parse_board_text(&board_text.to_string());
+        let expected = vec![
+            vec![
+                None,
+                None,
+                None,
+                None,
+            ],
+            vec![None, None, None, None],
+            vec![None, None, None, None],
+            vec![None, None, None, None],
+        ];
+        assert_eq!(expected, board.clone().unwrap().board);
+        assert_eq!(board.unwrap().available_pieces.len(), 16);
+
+    }
+
+    #[test]
+    fn test_pick_and_move() {
+        let dummy_text = indoc! {
+        /* - will be replaced to space */
+        r#"
+            ---- ---- ---- ----
+            ---- ---- ---- ----
+            ---- ---- ---- ----
+            ---- ---- ---- ----"#};
+        let board_text = dummy_text.replace("-", " ");
+
+        let board = Board::parse_board_text(&board_text.to_string());
+        let expected: Vec<Vec<Option<Piece>>> = vec![
+            vec![None, None, None, None],
+            vec![None, None, None, None],
+            vec![None, None, None, None],
+            vec![None, None, None, None],
+        ];
+        let bscf = Piece {
+            color: Color::Brown,
+            height: Height::Short,
+            shape: Shape::Circle,
+            top: Top::Flat,
+        };
+        let succeess = board.clone().unwrap().pick_piece(&bscf);
+        assert_eq!(succeess, true);
+        let success = board.unwrap().move_piece(bscf, 0, 0);
+
+
         let expected = vec![
             vec![
                 Some(Piece {
@@ -523,9 +587,8 @@ mod test {
             vec![None, None, None, None],
             vec![None, None, None, None],
         ];
-        assert_eq!(expected, board.clone().unwrap().board);
-        assert_eq!(board.unwrap().available_pieces.len(), 15)
     }
+
     #[test]
     fn test_judge_quatro() {
         let board_text = indoc! {
