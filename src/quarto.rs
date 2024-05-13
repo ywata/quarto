@@ -265,15 +265,20 @@ impl Board {
             return false;
         }
         if let None = self.board[x][y] {
-            if let Some(p) = &self.next_piece {
-                self.board[x][y] = Some(p.clone());
+            if let Some(p_) = &self.next_piece {
+                assert!(!self.available_pieces.contains(&p_));
+                if p == *p_ {
+                    self.board[x][y] = Some(p.clone());
+                    self.next_piece = None;
+                    return true
+                } else {
+                    return false;
+                }
             } else {
+                self.board[x][y] = Some(p.clone());
                 self.available_pieces.retain(|piece| *piece != p);
-                self.board[x][y] = Some(p);
+                return true;
             }
-            self.next_piece = None;
-
-            return true;
         } else {
             // A piece already occupies the position
             return false;
@@ -559,7 +564,7 @@ mod test {
         assert_eq!(r[0].0, vec![(0, 0), (0, 1), (0, 2), (0, 3)]);
         assert_eq!(r[1].0, vec![(0, 0), (1, 0), (2, 0), (3, 0)]);
 
-        println!("{:?}", r);
+        //println!("{:?}", r);
 
     }
 
@@ -616,6 +621,23 @@ mod test {
             vec![None, None, None, None],
         ];
         assert_eq!(expected, board.board);
+
+        let bssf = Piece {
+            color: Color::Brown,
+            height: Height::Short,
+            shape: Shape::Square,
+            top: Top::Flat,
+        };
+        let bsch = Piece {
+            color: Color::Brown,
+            height: Height::Short,
+            shape: Shape::Circle,
+            top: Top::Hole,
+        };
+        let success = board.pick_piece(&bssf);
+        assert!(success);
+        let fail = board.move_piece(bsch, 0, 2);
+        assert!(!fail);
     }
 
     #[test]
