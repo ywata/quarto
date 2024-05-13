@@ -1,3 +1,4 @@
+
 use std::collections::HashMap;
 use std::hash::Hash;
 
@@ -170,6 +171,7 @@ struct Board {
     board: Vec<Vec<CellState>>,
     available_pieces: Vec<Piece>,
 }
+
 
 impl From<Board> for String {
     fn from(board: Board) -> String {
@@ -488,8 +490,7 @@ mod test {
         r#"BSCF BSCH BSSF BSSH
                BTCF BTCH BTSF BTSH
                WSCF WSCH WSSF WSSH
-               WTCF WTCH WTSF BSCF
-               "#};
+               WTCF WTCH WTSF BSCF"#};
 
         let board = Board::parse_board_text(&board_text.to_string());
         assert_eq!(board, None)
@@ -531,7 +532,6 @@ mod test {
         r#"BSCF WWSB BSSW WWSB
            BSSW WWSB BSSW WWSB
            BSSW WWSB BSSW WWSB
-           BSSW WWSB BSSW WWSB
-           "#};
+           BSSW WWSB BSSW WWSB"#};
     }
 }
