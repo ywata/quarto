@@ -383,7 +383,7 @@ mod test {
     fn test_parse_all_pieces() {
         /* WB TS SC HF */
         let board_text = indoc! {
-        r#"BSCF BSCH BSSF BSSH
+            r#"BSCF BSCH BSSF BSSH
                BTCF BTCH BTSF BTSH
                WSCF WSCH WSSF WSSH
                WTCF WTCH WTSF WTSH"#};
