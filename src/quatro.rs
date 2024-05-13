@@ -552,7 +552,7 @@ mod test {
             ---- ---- ---- ----"#};
         let board_text = dummy_text.replace("-", " ");
 
-        let board = Board::parse_board_text(&board_text.to_string());
+        let board = &mut Board::parse_board_text(&board_text.to_string()).unwrap();
         let expected: Vec<Vec<Option<Piece>>> = vec![
             vec![None, None, None, None],
             vec![None, None, None, None],
@@ -565,10 +565,13 @@ mod test {
             shape: Shape::Circle,
             top: Top::Flat,
         };
-        let succeess = board.clone().unwrap().pick_piece(&bscf);
-        assert_eq!(succeess, true);
-        let success = board.unwrap().move_piece(bscf, 0, 0);
 
+        let succeess = board.pick_piece(&bscf);
+        assert_eq!(succeess, true);
+        let fail = board.pick_piece(&bscf);
+        assert_eq!(fail, false);
+        let success = board.move_piece(bscf, 0, 0);
+        assert_eq!(success, true);
 
         let expected = vec![
             vec![
