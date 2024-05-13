@@ -286,8 +286,13 @@ impl Board {
                     game.board[x][y] = None;
                 } else {
                     let piece = Piece::try_from(piece_text.to_string()).ok()?;
-                    if !game.move_piece(piece, x, y) {
-                        // use a piece multiple times
+                    if game.available_pieces.contains(&piece) {
+                        if !game.move_piece(piece, x, y) {
+                            // use a piece multiple times
+                            return None;
+                        }
+                    } else {
+                        // The piece is already used in the board
                         return None;
                     }
                 }
@@ -442,6 +447,19 @@ mod test {
         ];
         assert_eq!(expected, board.clone().unwrap().board);
         assert_eq!(board.unwrap().available_pieces.len(), 0)
+    }
+    #[test]
+    fn test_use_a_piece_multiple_times() {
+        /* WB TS SC HF */
+        let board_text = indoc! {
+        r#"BSCF BSCH BSSF BSSH
+               BTCF BTCH BTSF BTSH
+               WSCF WSCH WSSF WSSH
+               WTCF WTCH WTSF BSCF
+               "#};
+
+        let board = Board::parse_board_text(&board_text.to_string());
+        assert_eq!(board, None);
     }
     #[test]
     fn test_empty_board() {
