@@ -4,6 +4,7 @@ use std::hash::Hash;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+use itertools::Itertools;
 
 #[derive(Debug)]
 enum QuatroError {
@@ -170,6 +171,26 @@ struct Board {
     available_pieces: Vec<Piece>,
 }
 
+impl From<Board> for String {
+    fn from(board: Board) -> String {
+        let vv = board.board.into_iter()
+            .map(|r|
+                r.into_iter()
+                    .map(|c|
+                        c.map_or("    ".to_string(), |p|p.into()))
+
+                    .intersperse(" ".to_string())
+                    .collect()
+            )
+            .collect::<Vec<_>>()
+            .into_iter()
+            .intersperse("\n".to_string())
+            .collect();
+        vv
+    }
+}
+
+
 fn all_pieces() -> Vec<Piece> {
     let mut pieces: Vec<Piece> = Vec::new();
     for c in Color::iter() {
@@ -327,6 +348,20 @@ mod test {
         assert_eq!(board.board[0][0], None);
         assert_eq!(board.available_pieces.len(), 16);
     }
+
+    #[test]
+    fn test_parse_board_from_to() {
+        /* WB TS SC HF */
+        let board_text = indoc! {
+        r#"BSCF BSCH BSSF BSSH
+               BTCF BTCH BTSF BTSH
+               WSCF WSCH WSSF WSSH
+               WTCF WTCH WTSF WTSH"#};
+
+        let board = Board::parse_board_text(&board_text.to_string());
+        let board_text2: String = Board::from(board.unwrap()).into();
+        assert_eq!(board_text, board_text2)
+    }
     #[test]
     fn test_parse_all_pieces() {
         /* WB TS SC HF */
@@ -334,8 +369,7 @@ mod test {
         r#"BSCF BSCH BSSF BSSH
                BTCF BTCH BTSF BTSH
                WSCF WSCH WSSF WSSH
-               WTCF WTCH WTSF WTSH
-               "#};
+               WTCF WTCH WTSF WTSH"#};
 
         let board = Board::parse_board_text(&board_text.to_string());
 
@@ -459,7 +493,7 @@ mod test {
                "#};
 
         let board = Board::parse_board_text(&board_text.to_string());
-        assert_eq!(board, None);
+        assert_eq!(board, None)
     }
     #[test]
     fn test_empty_board() {
