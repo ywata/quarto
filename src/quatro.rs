@@ -559,6 +559,8 @@ mod test {
             vec![None, None, None, None],
             vec![None, None, None, None],
         ];
+        assert_eq!(expected, board.board);
+
         let bscf = Piece {
             color: Color::Brown,
             height: Height::Short,
@@ -589,6 +591,7 @@ mod test {
             vec![None, None, None, None],
             vec![None, None, None, None],
         ];
+        assert_eq!(expected, board.board);
     }
 
     #[test]
