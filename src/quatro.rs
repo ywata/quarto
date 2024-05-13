@@ -353,7 +353,6 @@ impl Board {
 #[cfg(test)]
 mod test {
     use super::*;
-    use env_logger::fmt::style::AnsiColor::Black;
     use indoc::indoc;
     #[test]
     fn test_board_new() {
