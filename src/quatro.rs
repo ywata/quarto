@@ -6,7 +6,7 @@ use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
 #[derive(Debug)]
-enum QuatroIoError {
+enum QuatroError {
     InvalidPieceError,
 }
 
@@ -31,12 +31,12 @@ impl From<Color> for String {
 }
 
 impl TryFrom<&str> for Color {
-    type Error = QuatroIoError;
+    type Error = QuatroError;
     fn try_from(c: &str) -> Result<Color, Self::Error> {
         match c {
             "B" => Ok(Color::Brown),
             "W" => Ok(Color::White),
-            _ => Err(QuatroIoError::InvalidPieceError),
+            _ => Err(QuatroError::InvalidPieceError),
         }
     }
 }
@@ -57,12 +57,12 @@ impl From<Height> for String {
 }
 
 impl TryFrom<&str> for Height {
-    type Error = QuatroIoError;
+    type Error = QuatroError;
     fn try_from(c: &str) -> Result<Height, Self::Error> {
         match c {
             "S" => Ok(Height::Short),
             "T" => Ok(Height::Tall),
-            _ => Err(QuatroIoError::InvalidPieceError),
+            _ => Err(QuatroError::InvalidPieceError),
         }
     }
 }
@@ -83,12 +83,12 @@ impl From<Shape> for String {
 }
 
 impl TryFrom<&str> for Shape {
-    type Error = QuatroIoError;
+    type Error = QuatroError;
     fn try_from(c: &str) -> Result<Shape, Self::Error> {
         match c {
             "C" => Ok(Shape::Circle),
             "S" => Ok(Shape::Square),
-            _ => Err(QuatroIoError::InvalidPieceError),
+            _ => Err(QuatroError::InvalidPieceError),
         }
     }
 }
@@ -109,12 +109,12 @@ impl From<Top> for String {
 }
 
 impl TryFrom<&str> for Top {
-    type Error = QuatroIoError;
+    type Error = QuatroError;
     fn try_from(c: &str) -> Result<Top, Self::Error> {
         match c {
             "F" => Ok(Top::Flat),
             "H" => Ok(Top::Hole),
-            _ => Err(QuatroIoError::InvalidPieceError),
+            _ => Err(QuatroError::InvalidPieceError),
         }
     }
 }
@@ -141,10 +141,10 @@ impl From<Piece> for String {
 }
 
 impl TryFrom<String> for Piece {
-    type Error = QuatroIoError;
+    type Error = QuatroError;
     fn try_from(text: String) -> Result<Piece, Self::Error> {
         if text.len() != 4 {
-            return Err(QuatroIoError::InvalidPieceError);
+            return Err(QuatroError::InvalidPieceError);
         }
         let color = &text[0..1];
         let height = &text[1..2];
