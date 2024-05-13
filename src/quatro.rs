@@ -459,9 +459,9 @@ mod test {
     fn test_judge_quatro() {
         let board_text = indoc! {
         r#"BSCF WWSB BSSW WWSB
-               BSSW WWSB BSSW WWSB
-               BSSW WWSB BSSW WWSB
-               BSSW WWSB BSSW WWSB
-               "#};
+           BSSW WWSB BSSW WWSB
+           BSSW WWSB BSSW WWSB
+           BSSW WWSB BSSW WWSB
+           "#};
     }
 }
