@@ -224,7 +224,7 @@ impl Board {
         &self,
         coords: &Vec<(usize, usize)>,
         prop: fn(Piece) -> S,
-    ) -> (bool, usize) {
+    ) -> (bool, HashMap<Option<S>, usize>) {
         let picked: Vec<_> = coords
             .into_iter()
             .map(|(x, y)| self.board[*x][*y].clone())
@@ -247,7 +247,7 @@ impl Board {
                 hmap.insert(v, 1);
             }
         }
-        (found_none, hmap.len())
+        (found_none, hmap)
     }
 
     pub fn pick_piece(&mut self, p: &Piece) -> bool {
@@ -279,29 +279,29 @@ impl Board {
             return false;
         }
     }
-    pub fn parse_quatro(
+    pub fn parse_quarto(
         &self,
-        coords_vec: Vec<Vec<(usize, usize)>>,
-    ) -> Vec<(
-        Vec<(usize, usize)>,
-        ((bool, usize), (bool, usize), (bool, usize), (bool, usize)),
+        coords_vec: Vec<Vec<(usize, usize)>>, )
+        -> Vec<(Vec<(usize, usize)>,
+                ((bool, HashMap<Option<Color>, usize>), (bool, HashMap<Option<Height>, usize>),
+                 (bool, HashMap<Option<Shape>, usize>), (bool, HashMap<Option<Top>, usize>))
     )> {
-        let mut ret: Vec<(
-            Vec<(usize, usize)>,
-            ((bool, usize), (bool, usize), (bool, usize), (bool, usize)),
-        )> = Vec::new();
+        let mut ret: Vec<(Vec<(usize, usize)>,
+        ((bool, HashMap<Option<Color>, usize>), (bool, HashMap<Option<Height>, usize>),
+         (bool, HashMap<Option<Shape>, usize>), (bool, HashMap<Option<Top>, usize>)))>
+            = Vec::new();
         for coords in coords_vec {
             let color_count = &self.count_elements(&coords, |piece| piece.color);
-            let shape_count = &self.count_elements(&coords, |piece| piece.shape);
             let height_count = &self.count_elements(&coords, |piece| piece.height);
+            let shape_count = &self.count_elements(&coords, |piece| piece.shape);
             let top_count = &self.count_elements(&coords, |piece| piece.top);
-            let quatro = (
+            let quarto = (
                 color_count.clone(),
-                shape_count.clone(),
                 height_count.clone(),
+                shape_count.clone(),
                 top_count.clone(),
             );
-            ret.push((coords.clone(), quatro));
+            ret.push((coords, quarto));
         }
 
         ret
@@ -354,6 +354,7 @@ impl Board {
 mod test {
     use super::*;
     use indoc::indoc;
+    use maplit::hashmap;
     #[test]
     fn test_board_new() {
         let board = Board::new();
@@ -503,7 +504,7 @@ mod test {
     fn test_use_a_piece_multiple_times() {
         /* WB TS SC HF */
         let board_text = indoc! {
-        r#"BSCF BSCH BSSF BSSH
+            r#"BSCF BSCH BSSF BSSH
                BTCF BTCH BTSF BTSH
                WSCF WSCH WSSF WSSH
                WTCF WTCH WTSF BSCF"#};
@@ -551,7 +552,13 @@ mod test {
         let board_text = dummy_text.replace("-", " ");
 
         let board = &mut Board::parse_board_text(&board_text.to_string()).unwrap();
-        let r = board.parse_quatro(vec![vec![(0,1), (0, 1), (0, 2), (0, 3)]]);
+        let r = board.parse_quarto(
+            vec![vec![(0, 0), (0, 1), (0, 2), (0, 3)],
+                 vec![(0,0), (1, 0), (2, 0), (3, 0)]]);
+
+        assert_eq!(r[0].0, vec![(0, 0), (0, 1), (0, 2), (0, 3)]);
+        assert_eq!(r[1].0, vec![(0, 0), (1, 0), (2, 0), (3, 0)]);
+
         println!("{:?}", r);
 
     }
