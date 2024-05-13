@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
-use itertools::Itertools;
 
 #[derive(Debug)]
 enum QuatroError {
@@ -173,15 +173,15 @@ struct Board {
 
 impl From<Board> for String {
     fn from(board: Board) -> String {
-        let vv = board.board.into_iter()
-            .map(|r|
+        let vv = board
+            .board
+            .into_iter()
+            .map(|r| {
                 r.into_iter()
-                    .map(|c|
-                        c.map_or("    ".to_string(), |p|p.into()))
-
+                    .map(|c| c.map_or("    ".to_string(), |p| p.into()))
                     .intersperse(" ".to_string())
                     .collect()
-            )
+            })
             .collect::<Vec<_>>()
             .into_iter()
             .intersperse("\n".to_string())
@@ -189,7 +189,6 @@ impl From<Board> for String {
         vv
     }
 }
-
 
 fn all_pieces() -> Vec<Piece> {
     let mut pieces: Vec<Piece> = Vec::new();
@@ -258,7 +257,7 @@ impl Board {
             return true;
         } else {
             // A piece already occupies the position
-            return false
+            return false;
         }
     }
     pub fn parse_quatro(
@@ -354,9 +353,9 @@ mod test {
         /* WB TS SC HF */
         let board_text = indoc! {
         r#"BSCF BSCH BSSF BSSH
-               BTCF BTCH BTSF BTSH
-               WSCF WSCH WSSF WSSH
-               WTCF WTCH WTSF WTSH"#};
+           BTCF BTCH BTSF BTSH
+           WSCF WSCH WSSF WSSH
+           WTCF WTCH WTSF WTSH"#};
 
         let board = Board::parse_board_text(&board_text.to_string());
         let board_text2: String = Board::from(board.unwrap()).into();
