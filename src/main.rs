@@ -1,3 +1,4 @@
+#![feature(iter_intersperse)]
 mod quatro;
 
 fn main() {

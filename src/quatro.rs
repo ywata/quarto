@@ -2,7 +2,6 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
