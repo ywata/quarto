@@ -226,6 +226,20 @@ impl Board {
         (found_none, hmap.len())
     }
 
+    pub fn move_piece(&mut self, p: Piece, x: usize, y: usize) -> bool {
+        if x >= 4 || y >= 4 {
+            // Out of board access
+            return false;
+        }
+        if let None = self.board[x][y] {
+            self.available_pieces.retain(|piece| *piece != p);
+            self.board[x][y] = Some(p);
+            return true;
+        } else {
+            // A piece already occupies the position
+            return false
+        }
+    }
     pub fn parse_quatro(
         self,
         coords_vec: Vec<Vec<(usize, usize)>>,
@@ -272,7 +286,10 @@ impl Board {
                     game.board[x][y] = None;
                 } else {
                     let piece = Piece::try_from(piece_text.to_string()).ok()?;
-                    game.board[x][y] = Some(piece);
+                    if !game.move_piece(piece, x, y) {
+                        // use a piece multiple times
+                        return None;
+                    }
                 }
                 if y != 3 {
                     let spacer = &line[5 * y + 4..5 * y + 5];
@@ -423,7 +440,8 @@ mod test {
                 }),
             ],
         ];
-        assert_eq!(expected, board.unwrap().board)
+        assert_eq!(expected, board.clone().unwrap().board);
+        assert_eq!(board.unwrap().available_pieces.len(), 0)
     }
     #[test]
     fn test_empty_board() {
@@ -453,7 +471,8 @@ mod test {
             vec![None, None, None, None],
             vec![None, None, None, None],
         ];
-        assert_eq!(expected, board.unwrap().board)
+        assert_eq!(expected, board.clone().unwrap().board);
+        assert_eq!(board.unwrap().available_pieces.len(), 15)
     }
     #[test]
     fn test_judge_quatro() {
