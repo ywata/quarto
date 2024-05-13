@@ -280,7 +280,7 @@ impl Board {
         }
     }
     pub fn parse_quatro(
-        self,
+        &self,
         coords_vec: Vec<Vec<(usize, usize)>>,
     ) -> Vec<(
         Vec<(usize, usize)>,
@@ -541,6 +541,24 @@ mod test {
     }
 
     #[test]
+    fn test_parse_quarto() {
+        let dummy_text = indoc! {
+        /* - will be replaced to space */
+        r#"BSCF BSCH BSSF BSSH
+           ---- ---- ---- ----
+           ---- ---- ---- ----
+           ---- ---- ---- ----"#};
+        let board_text = dummy_text.replace("-", " ");
+
+        let board = &mut Board::parse_board_text(&board_text.to_string()).unwrap();
+        let r = board.parse_quatro(vec![vec![(0,1), (0, 1), (0, 2), (0, 3)]]);
+        println!("{:?}", r);
+
+    }
+
+
+
+    #[test]
     fn test_pick_and_move() {
         let dummy_text = indoc! {
         /* - will be replaced to space */
@@ -595,7 +613,7 @@ mod test {
 
     #[test]
     fn test_judge_quatro() {
-        let board_text = indoc! {
+        let _board_text = indoc! {
         r#"BSCF WWSB BSSW WWSB
            BSSW WWSB BSSW WWSB
            BSSW WWSB BSSW WWSB

@@ -135,7 +135,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "quatro"
+name = "quarto"
 version = "0.1.0"
 dependencies = [
  "env_logger",

@@ -1,5 +1,5 @@
 #![feature(iter_intersperse)]
-mod quatro;
+mod quarto;
 
 fn main() {
     println!("Hello, world!");
