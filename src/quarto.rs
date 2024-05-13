@@ -165,7 +165,7 @@ impl TryFrom<String> for Piece {
 type CellState = Option<Piece>;
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-struct Board {
+struct Quarto {
     /* Only 4x4 board size is allowed */
     board: Vec<Vec<CellState>>,
     available_pieces: Vec<Piece>,
@@ -173,9 +173,9 @@ struct Board {
 }
 
 
-impl From<Board> for String {
-    fn from(board: Board) -> String {
-        let vv = board
+impl From<Quarto> for String {
+    fn from(quarto: Quarto) -> String {
+        let vv = quarto
             .board
             .into_iter()
             .map(|r| {
@@ -211,9 +211,9 @@ fn all_pieces() -> Vec<Piece> {
     pieces
 }
 
-impl Board {
+impl Quarto {
     pub fn new() -> Self {
-        Board {
+        Quarto {
             board: vec![vec![CellState::None; 4]; 4],
             available_pieces: all_pieces(),
             next_piece: None,
@@ -312,8 +312,8 @@ impl Board {
         ret
     }
 
-    pub fn parse_board_text(text: &String) -> Option<Board> {
-        let mut game = Board::new();
+    pub fn parse_board_text(text: &String) -> Option<Quarto> {
+        let mut quarto = Quarto::new();
         let lines: Vec<&str> = text.lines().collect();
         if lines.len() != 4 {
             return None;
@@ -327,11 +327,11 @@ impl Board {
             for y in 0..4 {
                 let piece_text = &line[5 * y..5 * y + 4];
                 if piece_text.eq("    ") {
-                    game.board[x][y] = None;
+                    quarto.board[x][y] = None;
                 } else {
                     let piece = Piece::try_from(piece_text.to_string()).ok()?;
-                    if game.available_pieces.contains(&piece) {
-                        if !game.move_piece(piece, x, y) {
+                    if quarto.available_pieces.contains(&piece) {
+                        if !quarto.move_piece(piece, x, y) {
                             // use a piece multiple times
                             return None;
                         }
@@ -351,7 +351,7 @@ impl Board {
 
             x += 1;
         }
-        Some(game)
+        Some(quarto)
     }
 }
 
@@ -362,14 +362,14 @@ mod test {
     use maplit::hashmap;
     #[test]
     fn test_board_new() {
-        let board = Board::new();
-        assert_eq!(board.board.len(), 4);
-        assert_eq!(board.board[0].len(), 4);
-        assert_eq!(board.board[1].len(), 4);
-        assert_eq!(board.board[2].len(), 4);
-        assert_eq!(board.board[3].len(), 4);
-        assert_eq!(board.board[0][0], None);
-        assert_eq!(board.available_pieces.len(), 16);
+        let quarto = Quarto::new();
+        assert_eq!(quarto.board.len(), 4);
+        assert_eq!(quarto.board[0].len(), 4);
+        assert_eq!(quarto.board[1].len(), 4);
+        assert_eq!(quarto.board[2].len(), 4);
+        assert_eq!(quarto.board[3].len(), 4);
+        assert_eq!(quarto.board[0][0], None);
+        assert_eq!(quarto.available_pieces.len(), 16);
     }
 
     #[test]
@@ -381,8 +381,8 @@ mod test {
            WSCF WSCH WSSF WSSH
            WTCF WTCH WTSF WTSH"#};
 
-        let board = Board::parse_board_text(&board_text.to_string());
-        let board_text2: String = Board::from(board.unwrap()).into();
+        let quarto = Quarto::parse_board_text(&board_text.to_string());
+        let board_text2: String = Quarto::from(quarto.unwrap()).into();
         assert_eq!(board_text, board_text2)
     }
     #[test]
@@ -394,7 +394,7 @@ mod test {
                WSCF WSCH WSSF WSSH
                WTCF WTCH WTSF WTSH"#};
 
-        let board = Board::parse_board_text(&board_text.to_string());
+        let quarto = Quarto::parse_board_text(&board_text.to_string());
 
         let expected = vec![
             vec![
@@ -502,8 +502,8 @@ mod test {
                 }),
             ],
         ];
-        assert_eq!(expected, board.clone().unwrap().board);
-        assert_eq!(board.unwrap().available_pieces.len(), 0)
+        assert_eq!(expected, quarto.clone().unwrap().board);
+        assert_eq!(quarto.unwrap().available_pieces.len(), 0)
     }
     #[test]
     fn test_use_a_piece_multiple_times() {
@@ -514,8 +514,8 @@ mod test {
                WSCF WSCH WSSF WSSH
                WTCF WTCH WTSF BSCF"#};
 
-        let board = Board::parse_board_text(&board_text.to_string());
-        assert_eq!(board, None)
+        let quarto = Quarto::parse_board_text(&board_text.to_string());
+        assert_eq!(quarto, None)
     }
 
     #[test]
@@ -529,7 +529,7 @@ mod test {
             ---- ---- ---- ----"#};
         let board_text = dummy_text.replace("-", " ");
 
-        let board = Board::parse_board_text(&board_text.to_string());
+        let quarto = Quarto::parse_board_text(&board_text.to_string());
         let expected = vec![
             vec![
                 None,
@@ -541,8 +541,8 @@ mod test {
             vec![None, None, None, None],
             vec![None, None, None, None],
         ];
-        assert_eq!(expected, board.clone().unwrap().board);
-        assert_eq!(board.unwrap().available_pieces.len(), 16);
+        assert_eq!(expected, quarto.clone().unwrap().board);
+        assert_eq!(quarto.unwrap().available_pieces.len(), 16);
 
     }
 
@@ -556,8 +556,8 @@ mod test {
            ---- ---- ---- ----"#};
         let board_text = dummy_text.replace("-", " ");
 
-        let board = &mut Board::parse_board_text(&board_text.to_string()).unwrap();
-        let r = board.parse_quarto(
+        let quarto = &mut Quarto::parse_board_text(&board_text.to_string()).unwrap();
+        let r = quarto.parse_quarto(
             vec![vec![(0, 0), (0, 1), (0, 2), (0, 3)],
                  vec![(0,0), (1, 0), (2, 0), (3, 0)]]);
 
@@ -581,14 +581,14 @@ mod test {
             ---- ---- ---- ----"#};
         let board_text = dummy_text.replace("-", " ");
 
-        let board = &mut Board::parse_board_text(&board_text.to_string()).unwrap();
+        let quarto = &mut Quarto::parse_board_text(&board_text.to_string()).unwrap();
         let expected: Vec<Vec<Option<Piece>>> = vec![
             vec![None, None, None, None],
             vec![None, None, None, None],
             vec![None, None, None, None],
             vec![None, None, None, None],
         ];
-        assert_eq!(expected, board.board);
+        assert_eq!(expected, quarto.board);
 
         let bscf = Piece {
             color: Color::Brown,
@@ -597,11 +597,11 @@ mod test {
             top: Top::Flat,
         };
 
-        let succeess = board.pick_piece(&bscf);
+        let succeess = quarto.pick_piece(&bscf);
         assert_eq!(succeess, true);
-        let fail = board.pick_piece(&bscf);
+        let fail = quarto.pick_piece(&bscf);
         assert_eq!(fail, false);
-        let success = board.move_piece(bscf, 0, 0);
+        let success = quarto.move_piece(bscf, 0, 0);
         assert_eq!(success, true);
 
         let expected = vec![
@@ -620,7 +620,7 @@ mod test {
             vec![None, None, None, None],
             vec![None, None, None, None],
         ];
-        assert_eq!(expected, board.board);
+        assert_eq!(expected, quarto.board);
 
         let bssf = Piece {
             color: Color::Brown,
@@ -634,9 +634,9 @@ mod test {
             shape: Shape::Circle,
             top: Top::Hole,
         };
-        let success = board.pick_piece(&bssf);
+        let success = quarto.pick_piece(&bssf);
         assert!(success);
-        let fail = board.move_piece(bsch, 0, 2);
+        let fail = quarto.move_piece(bsch, 0, 2);
         assert!(!fail);
     }
 
