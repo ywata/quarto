@@ -1,4 +1,3 @@
-
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
@@ -172,9 +171,8 @@ struct Quarto {
     /* Only 4x4 board size is allowed */
     board: Vec<Vec<CellState>>,
     available_pieces: Vec<Piece>,
-    next_piece: Option<Piece>
+    next_piece: Option<Piece>,
 }
-
 
 impl From<Quarto> for String {
     fn from(quarto: Quarto) -> String {
@@ -273,7 +271,7 @@ impl Quarto {
                 if p == *p_ {
                     self.board[x][y] = Some(p.clone());
                     self.next_piece = None;
-                    return true
+                    return true;
                 } else {
                     return false;
                 }
@@ -288,18 +286,29 @@ impl Quarto {
         }
     }
 
-    fn is_quarto<S:Eq + PartialEq + Hash>(ls:&(bool, HashMap<S, usize>)) -> bool {
+    fn is_quarto<S: Eq + PartialEq + Hash>(ls: &(bool, HashMap<S, usize>)) -> bool {
         let set = ls.1.values().collect::<HashSet<_>>();
         !ls.0 && set.contains(&(4 as usize))
     }
-    pub fn summarize(vv: &Vec<(Vec<(usize, usize)>,
-                                     ((bool, HashMap<Option<Color>, usize>), (bool, HashMap<Option<Height>, usize>),
-                             (bool, HashMap<Option<Shape>, usize>), (bool, HashMap<Option<Top>, usize>)))>)
-                     -> Vec<Vec<(usize, usize)>>{
-        let r = vv.into_iter()
-            .filter(|(_,
-                         (cls, hls, sls, tls))|
-                Self::is_quarto(cls) ||Self::is_quarto(hls) ||Self::is_quarto(sls) ||Self::is_quarto(tls)  )
+    pub fn summarize(
+        vv: &Vec<(
+            Vec<(usize, usize)>,
+            (
+                (bool, HashMap<Option<Color>, usize>),
+                (bool, HashMap<Option<Height>, usize>),
+                (bool, HashMap<Option<Shape>, usize>),
+                (bool, HashMap<Option<Top>, usize>),
+            ),
+        )>,
+    ) -> Vec<Vec<(usize, usize)>> {
+        let r = vv
+            .into_iter()
+            .filter(|(_, (cls, hls, sls, tls))| {
+                Self::is_quarto(cls)
+                    || Self::is_quarto(hls)
+                    || Self::is_quarto(sls)
+                    || Self::is_quarto(tls)
+            })
             .collect::<Vec<_>>()
             .into_iter()
             .map(|(l, _)| l.clone())
@@ -307,17 +316,27 @@ impl Quarto {
         r
     }
 
-
     pub fn parse_quarto(
         &self,
-        coords_vec: Vec<Vec<(usize, usize)>>, )
-        -> Vec<(Vec<(usize, usize)>,
-                ((bool, HashMap<Option<Color>, usize>), (bool, HashMap<Option<Height>, usize>),
-                 (bool, HashMap<Option<Shape>, usize>), (bool, HashMap<Option<Top>, usize>)))> {
-        let mut ret: Vec<(Vec<(usize, usize)>,
-                          ((bool, HashMap<Option<Color>, usize>), (bool, HashMap<Option<Height>, usize>),
-                           (bool, HashMap<Option<Shape>, usize>), (bool, HashMap<Option<Top>, usize>)))>
-            = Vec::new();
+        coords_vec: Vec<Vec<(usize, usize)>>,
+    ) -> Vec<(
+        Vec<(usize, usize)>,
+        (
+            (bool, HashMap<Option<Color>, usize>),
+            (bool, HashMap<Option<Height>, usize>),
+            (bool, HashMap<Option<Shape>, usize>),
+            (bool, HashMap<Option<Top>, usize>),
+        ),
+    )> {
+        let mut ret: Vec<(
+            Vec<(usize, usize)>,
+            (
+                (bool, HashMap<Option<Color>, usize>),
+                (bool, HashMap<Option<Height>, usize>),
+                (bool, HashMap<Option<Shape>, usize>),
+                (bool, HashMap<Option<Top>, usize>),
+            ),
+        )> = Vec::new();
         for coords in coords_vec {
             let color_count = &self.count_elements(&coords, |piece| piece.color);
             let height_count = &self.count_elements(&coords, |piece| piece.height);
@@ -412,10 +431,10 @@ mod test {
     fn test_parse_all_pieces() {
         /* WB TS SC HF */
         let board_text = indoc! {
-            r#"BSCF BSCH BSSF BSSH
-               BTCF BTCH BTSF BTSH
-               WSCF WSCH WSSF WSSH
-               WTCF WTCH WTSF WTSH"#};
+        r#"BSCF BSCH BSSF BSSH
+           BTCF BTCH BTSF BTSH
+           WSCF WSCH WSSF WSSH
+           WTCF WTCH WTSF WTSH"#};
 
         let quarto = Quarto::parse_board_text(&board_text.to_string());
 
@@ -532,10 +551,10 @@ mod test {
     fn test_use_a_piece_multiple_times() {
         /* WB TS SC HF */
         let board_text = indoc! {
-            r#"BSCF BSCH BSSF BSSH
-               BTCF BTCH BTSF BTSH
-               WSCF WSCH WSSF WSSH
-               WTCF WTCH WTSF BSCF"#};
+        r#"BSCF BSCH BSSF BSSH
+           BTCF BTCH BTSF BTSH
+           WSCF WSCH WSSF WSSH
+           WTCF WTCH WTSF BSCF"#};
 
         let quarto = Quarto::parse_board_text(&board_text.to_string());
         assert_eq!(quarto, None)
@@ -561,7 +580,6 @@ mod test {
         ];
         assert_eq!(expected, quarto.clone().unwrap().board);
         assert_eq!(quarto.unwrap().available_pieces.len(), 16);
-
     }
 
     #[test]
@@ -575,21 +593,17 @@ mod test {
         let board_text = dummy_text.replace("-", " ");
 
         let quarto = &mut Quarto::parse_board_text(&board_text.to_string()).unwrap();
-        let r = quarto.parse_quarto(
-            vec![vec![(0, 0), (0, 1), (0, 2), (0, 3)], vec![(0,0), (1, 0), (2, 0), (3, 0)]]);
+        let r = quarto.parse_quarto(vec![
+            vec![(0, 0), (0, 1), (0, 2), (0, 3)],
+            vec![(0, 0), (1, 0), (2, 0), (3, 0)],
+        ]);
         assert_eq!(r[0].0, vec![(0, 0), (0, 1), (0, 2), (0, 3)]);
         assert_eq!(r[1].0, vec![(0, 0), (1, 0), (2, 0), (3, 0)]);
 
         let rr = Quarto::summarize(&r);
         assert!(rr.len() == 1);
         assert_eq!(rr[0], vec![(0, 0), (0, 1), (0, 2), (0, 3)]);
-
-
-
-
     }
-
-
 
     #[test]
     fn test_pick_and_move() {
@@ -633,7 +647,9 @@ mod test {
                     shape: Shape::Circle,
                     top: Top::Flat,
                 }),
-                None, None, None,
+                None,
+                None,
+                None,
             ],
             vec![None, None, None, None],
             vec![None, None, None, None],
