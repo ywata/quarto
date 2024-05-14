@@ -6,6 +6,9 @@ use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
+#[cfg(not(feature = "nightly"))]
+use itertools::Itertools;
+
 #[derive(Debug)]
 enum QuartoError {
     InvalidPieceError,

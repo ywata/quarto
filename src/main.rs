@@ -1,4 +1,4 @@
-#![feature(iter_intersperse)]
+#![cfg_attr(feature = "nightly", feature(iter_intersperse))]
 mod quarto;
 
 fn main() {
