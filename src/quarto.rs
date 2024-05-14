@@ -1,5 +1,5 @@
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
 use serde::{Deserialize, Serialize};
@@ -284,16 +284,36 @@ impl Quarto {
             return false;
         }
     }
+
+    fn is_quarto<S:Eq + PartialEq + Hash>(ls:&(bool, HashMap<S, usize>)) -> bool {
+        let set = ls.1.values().collect::<HashSet<_>>();
+        !ls.0 && set.contains(&(4 as usize))
+    }
+    pub fn summarize(vv: &Vec<(Vec<(usize, usize)>,
+                                     ((bool, HashMap<Option<Color>, usize>), (bool, HashMap<Option<Height>, usize>),
+                             (bool, HashMap<Option<Shape>, usize>), (bool, HashMap<Option<Top>, usize>)))>)
+                     -> Vec<Vec<(usize, usize)>>{
+        let r = vv.into_iter()
+            .filter(|(_,
+                         (cls, hls, sls, tls))|
+                Self::is_quarto(cls) ||Self::is_quarto(hls) ||Self::is_quarto(sls) ||Self::is_quarto(tls)  )
+            .collect::<Vec<_>>()
+            .into_iter()
+            .map(|(l, _)| l.clone())
+            .collect::<Vec<_>>();
+        r
+    }
+
+
     pub fn parse_quarto(
         &self,
         coords_vec: Vec<Vec<(usize, usize)>>, )
         -> Vec<(Vec<(usize, usize)>,
                 ((bool, HashMap<Option<Color>, usize>), (bool, HashMap<Option<Height>, usize>),
-                 (bool, HashMap<Option<Shape>, usize>), (bool, HashMap<Option<Top>, usize>))
-    )> {
+                 (bool, HashMap<Option<Shape>, usize>), (bool, HashMap<Option<Top>, usize>)))> {
         let mut ret: Vec<(Vec<(usize, usize)>,
-        ((bool, HashMap<Option<Color>, usize>), (bool, HashMap<Option<Height>, usize>),
-         (bool, HashMap<Option<Shape>, usize>), (bool, HashMap<Option<Top>, usize>)))>
+                          ((bool, HashMap<Option<Color>, usize>), (bool, HashMap<Option<Height>, usize>),
+                           (bool, HashMap<Option<Shape>, usize>), (bool, HashMap<Option<Top>, usize>)))>
             = Vec::new();
         for coords in coords_vec {
             let color_count = &self.count_elements(&coords, |piece| piece.color);
@@ -531,12 +551,7 @@ mod test {
 
         let quarto = Quarto::parse_board_text(&board_text.to_string());
         let expected = vec![
-            vec![
-                None,
-                None,
-                None,
-                None,
-            ],
+            vec![None, None, None, None],
             vec![None, None, None, None],
             vec![None, None, None, None],
             vec![None, None, None, None],
@@ -558,13 +573,16 @@ mod test {
 
         let quarto = &mut Quarto::parse_board_text(&board_text.to_string()).unwrap();
         let r = quarto.parse_quarto(
-            vec![vec![(0, 0), (0, 1), (0, 2), (0, 3)],
-                 vec![(0,0), (1, 0), (2, 0), (3, 0)]]);
-
+            vec![vec![(0, 0), (0, 1), (0, 2), (0, 3)], vec![(0,0), (1, 0), (2, 0), (3, 0)]]);
         assert_eq!(r[0].0, vec![(0, 0), (0, 1), (0, 2), (0, 3)]);
         assert_eq!(r[1].0, vec![(0, 0), (1, 0), (2, 0), (3, 0)]);
 
-        //println!("{:?}", r);
+        let rr = Quarto::summarize(&r);
+        assert!(rr.len() == 1);
+        assert_eq!(rr[0], vec![(0, 0), (0, 1), (0, 2), (0, 3)]);
+
+
+
 
     }
 
