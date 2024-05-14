@@ -401,7 +401,6 @@ impl Quarto {
 mod test {
     use super::*;
     use indoc::indoc;
-    use maplit::hashmap;
     #[test]
     fn test_board_new() {
         let quarto = Quarto::new();
