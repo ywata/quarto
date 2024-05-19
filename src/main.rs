@@ -1,18 +1,20 @@
 #![cfg_attr(feature = "nightly", feature(iter_intersperse))]
 
-use sqlx::SqlitePool;
+
+use std::env;
+use sqlx::{Pool, SqlitePool, Sqlite};
+use sqlx::migrate::MigrateDatabase;
+
+
 use crate::quarto::QuartoError;
 use clap::{Parser, Subcommand};
-use tokio::{main};
+use uuid::Uuid;
 mod quarto;
 mod cli;
 
 #[derive(Clone, Debug, Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    #[arg(long)]
-    sqlite_url: String,
-
     #[clap(subcommand)]
     command: Command,
 }
@@ -24,36 +26,65 @@ enum Command {
 }
 
 
+
 async fn init_sqlite(db_url: &str) -> Result<(), QuartoError>{
-    use sqlx::{migrate::MigrateDatabase, Sqlite};
-
     if Sqlite::database_exists(db_url).await.unwrap_or(false) {
+        println!("duplicated: {}", db_url);
         return Err(QuartoError::FileExists);
     }
-    if let Err(_) = Sqlite::create_database(db_url).await {
+    if let Err(err) = Sqlite::create_database(db_url).await {
+        println!("{:?}", err);
         return Err(QuartoError::FileExists);
     }
 
-    let db = SqlitePool::connect(db_url).await.unwrap();
+    let db: Pool<Sqlite> = SqlitePool::connect(db_url).await.unwrap();
     let result = sqlx::query(
         r#"
-        CREATE TABLE IF NOT EXISTS users
-        (id INTEGER PRIMARY KEY NOT NULL,
-        name VARCHAR(250) NOT NULL);"#)
+        CREATE TABLE IF NOT EXISTS game
+        (
+          id INTEGER PRIMARY KEY,
+          uuid VARCHAR,
+          assigned_1st BOOLEAN default false,
+          assigned_2nd BOOLEAN default false,
+          board_state VARCHAR
+        );"#)
         .execute(&db).await.unwrap();
-    println!("Create user table result: {:?}", result);
+    println!("create table: {:?}", result);
     Ok(())
 }
 
 
+async fn insert_new_game(db: &Pool<Sqlite>, uuid: &String) -> (){
+    #[cfg(not(feature = "init"))] {
+        let result = sqlx::query!(
+        r#"
+        INSERT INTO game (uuid)
+        VALUES (?1);
+        "#, uuid
+        ).execute(db).await.unwrap();
+        print!("Insert record: {:?}", result);
+    }
+
+    ()
+}
+
 
 #[tokio::main]
-async fn main() -> Result<(), QuartoError> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::parse();
-    println!("{:?}", args);
+    let db_url = env::var("DATABASE_URL")
+        .expect("DATABASEURL should be set");
+    println!("{:?}", &args);
+
     let result = match args.command {
-        Command::Init => init_sqlite(&args.sqlite_url).await,
-        _ => Ok(()),
+        Command::Init => init_sqlite(&db_url).await,
+        Command::NewGame => {
+            let db: Pool<Sqlite> = SqlitePool::connect(&db_url).await.unwrap();
+            let uuid = Uuid::new_v4().to_string();
+            let result = insert_new_game(&db, &uuid).await;
+            println!("{:?} {:?}", result, uuid);
+            Ok(())
+        }
     };
 
     Ok(())
