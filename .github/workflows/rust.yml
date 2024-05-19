@@ -45,3 +45,7 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
 
+    - name: sql init
+      run: cargo run --features init -- init
+    - name: sql new-game
+      run: cargo run -- new-game
