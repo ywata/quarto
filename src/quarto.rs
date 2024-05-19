@@ -9,8 +9,9 @@ use strum_macros::EnumIter;
 use itertools::Itertools;
 
 #[derive(Debug)]
-enum QuartoError {
+pub enum QuartoError {
     InvalidPieceError,
+    FileExists,
 }
 
 /* Piece properties are ordered in enum name alphabetical order.
