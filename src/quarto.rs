@@ -1,14 +1,20 @@
+
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
+use std::convert::TryFrom;
+
 
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
+use strum_macros::Display;
 use strum_macros::EnumIter;
+
+use thiserror::Error;
 
 #[cfg(not(feature = "nightly"))]
 use itertools::Itertools;
 
-#[derive(Debug)]
+#[derive(Debug, Display, Error)]
 pub enum QuartoError {
     InvalidPieceError,
     FileExists,
@@ -20,7 +26,7 @@ pub enum QuartoError {
 */
 
 #[derive(Clone, Debug, EnumIter, Eq, Hash, Deserialize, Serialize, PartialEq)]
-enum Color {
+pub enum Color {
     Brown,
     White,
 }
@@ -46,7 +52,7 @@ impl TryFrom<&str> for Color {
 }
 
 #[derive(Clone, Debug, EnumIter, Eq, Hash, Deserialize, Serialize, PartialEq)]
-enum Height {
+pub enum Height {
     Short,
     Tall,
 }
@@ -72,7 +78,7 @@ impl TryFrom<&str> for Height {
 }
 
 #[derive(Clone, Debug, EnumIter, Eq, Hash, Deserialize, Serialize, PartialEq)]
-enum Shape {
+pub enum Shape {
     Circle,
     Square,
 }
@@ -98,7 +104,7 @@ impl TryFrom<&str> for Shape {
 }
 
 #[derive(Clone, Debug, EnumIter, Eq, Hash, Deserialize, Serialize, PartialEq)]
-enum Top {
+pub enum Top {
     Flat,
     Hole,
 }
@@ -124,7 +130,7 @@ impl TryFrom<&str> for Top {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Serialize, PartialEq)]
-struct Piece {
+pub struct Piece {
     color: Color,
     height: Height,
     shape: Shape,
@@ -166,19 +172,22 @@ impl TryFrom<String> for Piece {
 
 /* Nothing corresponded to empty cell */
 type CellState = Option<Piece>;
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct BoardState(Vec<Vec<CellState>>);
+
+
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-struct Quarto {
+pub struct Quarto {
     /* Only 4x4 board size is allowed */
-    board: Vec<Vec<CellState>>,
+    pub board_state: BoardState,
     available_pieces: Vec<Piece>,
-    next_piece: Option<Piece>,
+    pub next_piece: Option<Piece>,
 }
 
-impl From<Quarto> for String {
-    fn from(quarto: Quarto) -> String {
-        let vv = quarto
-            .board
+impl From<BoardState> for String {
+    fn from(bs: BoardState) -> Self {
+        let vv = bs.0
             .into_iter()
             .map(|r| {
                 r.into_iter()
@@ -216,7 +225,7 @@ fn all_pieces() -> Vec<Piece> {
 impl Quarto {
     pub fn new() -> Self {
         Quarto {
-            board: vec![vec![CellState::None; 4]; 4],
+            board_state: BoardState(vec![vec![CellState::None; 4]; 4]),
             available_pieces: all_pieces(),
             next_piece: None,
         }
@@ -229,7 +238,7 @@ impl Quarto {
     ) -> (bool, HashMap<Option<S>, usize>) {
         let picked: Vec<_> = coords
             .into_iter()
-            .map(|(x, y)| self.board[*x][*y].clone())
+            .map(|(x, y)| self.board_state.0[*x][*y].clone())
             .collect();
         let picked_property: Vec<Option<S>> = picked
             .clone()
@@ -266,18 +275,18 @@ impl Quarto {
             // Out of board access
             return false;
         }
-        if let None = self.board[x][y] {
+        if let None = self.board_state.0[x][y] {
             if let Some(p_) = &self.next_piece {
                 assert!(!self.available_pieces.contains(&p_));
                 if p == *p_ {
-                    self.board[x][y] = Some(p.clone());
+                    self.board_state.0[x][y] = Some(p.clone());
                     self.next_piece = None;
                     return true;
                 } else {
                     return false;
                 }
             } else {
-                self.board[x][y] = Some(p.clone());
+                self.board_state.0[x][y] = Some(p.clone());
                 self.available_pieces.retain(|piece| *piece != p);
                 return true;
             }
@@ -354,7 +363,22 @@ impl Quarto {
 
         ret
     }
-
+    /*
+    pub fn format_board_state(board_state: Vec<Vec<Option<Piece>>>) -> String {
+        let mut ret = String::from("");
+        for col in board_state {
+            for cell in col {
+                let piece_str = match cell {
+                    None => "    ",
+                    Some(piece) => &<Piece as Into<String>>::into(piece),
+                };
+                ret.push_str(piece_str);
+            }
+            ret.push(' ');
+        }
+        let _ = ret.pop();
+        ret.to_string()
+    }*/
     pub fn parse_board_text(text: &String) -> Option<Quarto> {
         let mut quarto = Quarto::new();
         let lines: Vec<&str> = text.lines().collect();
@@ -370,7 +394,7 @@ impl Quarto {
             for y in 0..4 {
                 let piece_text = &line[5 * y..5 * y + 4];
                 if piece_text.eq("    ") {
-                    quarto.board[x][y] = None;
+                    quarto.board_state.0[x][y] = None;
                 } else {
                     let piece = Piece::try_from(piece_text.to_string()).ok()?;
                     if quarto.available_pieces.contains(&piece) {
@@ -405,12 +429,12 @@ mod test {
     #[test]
     fn test_board_new() {
         let quarto = Quarto::new();
-        assert_eq!(quarto.board.len(), 4);
-        assert_eq!(quarto.board[0].len(), 4);
-        assert_eq!(quarto.board[1].len(), 4);
-        assert_eq!(quarto.board[2].len(), 4);
-        assert_eq!(quarto.board[3].len(), 4);
-        assert_eq!(quarto.board[0][0], None);
+        assert_eq!(quarto.board_state.0.len(), 4);
+        assert_eq!(quarto.board_state.0[0].len(), 4);
+        assert_eq!(quarto.board_state.0[1].len(), 4);
+        assert_eq!(quarto.board_state.0[2].len(), 4);
+        assert_eq!(quarto.board_state.0[3].len(), 4);
+        assert_eq!(quarto.board_state.0[0][0], None);
         assert_eq!(quarto.available_pieces.len(), 16);
     }
 
@@ -424,7 +448,7 @@ mod test {
            WTCF WTCH WTSF WTSH"#};
 
         let quarto = Quarto::parse_board_text(&board_text.to_string());
-        let board_text2: String = Quarto::from(quarto.unwrap()).into();
+        let board_text2: String = BoardState::from(quarto.unwrap().board_state).into();
         assert_eq!(board_text, board_text2)
     }
     #[test]
@@ -544,7 +568,7 @@ mod test {
                 }),
             ],
         ];
-        assert_eq!(expected, quarto.clone().unwrap().board);
+        assert_eq!(expected, quarto.clone().unwrap().board_state.0);
         assert_eq!(quarto.unwrap().available_pieces.len(), 0)
     }
     #[test]
@@ -578,7 +602,7 @@ mod test {
             vec![None, None, None, None],
             vec![None, None, None, None],
         ];
-        assert_eq!(expected, quarto.clone().unwrap().board);
+        assert_eq!(expected, quarto.clone().unwrap().board_state.0);
         assert_eq!(quarto.unwrap().available_pieces.len(), 16);
     }
 
@@ -623,7 +647,7 @@ mod test {
             vec![None, None, None, None],
             vec![None, None, None, None],
         ];
-        assert_eq!(expected, quarto.board);
+        assert_eq!(expected, quarto.board_state.0);
 
         let bscf = Piece {
             color: Color::Brown,
@@ -655,7 +679,7 @@ mod test {
             vec![None, None, None, None],
             vec![None, None, None, None],
         ];
-        assert_eq!(expected, quarto.board);
+        assert_eq!(expected, quarto.board_state.0);
 
         let bssf = Piece {
             color: Color::Brown,
