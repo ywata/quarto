@@ -23,7 +23,10 @@ struct Cli {
 
 #[derive(Clone, Debug, Subcommand)]
 enum Command {
-    Init,
+    Init {
+        #[arg(long)]
+        force: Option<bool>,
+    },
     NewGame,
     Move {
         uuid: String,
@@ -34,7 +37,6 @@ enum Command {
 }
 
 async fn init_sqlite(db_url: &str) -> Result<SqliteQueryResult, sqlx::Error> {
-    Sqlite::database_exists(db_url).await.unwrap_or(false);
     Sqlite::create_database(db_url).await?;
 
     let db: Pool<Sqlite> = SqlitePool::connect(db_url).await.unwrap();
@@ -42,12 +44,12 @@ async fn init_sqlite(db_url: &str) -> Result<SqliteQueryResult, sqlx::Error> {
         r#"
         CREATE TABLE IF NOT EXISTS game
         (
-          id INTEGER PRIMARY KEY,
-          uuid VARCHAR,
-          assigned_1st BOOLEAN default false,
-          assigned_2nd BOOLEAN default false,
-          next_piece VARCHAR,
-          board_state VARCHAR
+              id INTEGER PRIMARY KEY,
+              uuid VARCHAR,
+              assigned_1st BOOLEAN default false,
+              assigned_2nd BOOLEAN default false,
+              next_piece VARCHAR,
+              board_state VARCHAR
         );"#,
     )
     .execute(&db)
@@ -138,9 +140,14 @@ async fn main() -> Result<(), QuartoError> {
     println!("{:?}", &args);
 
     let result: Result<(), QuartoError> = match args.command {
-        Command::Init => {
-            let result = init_sqlite(&db_url).await;
-            result.map(|_| ()).map_err(|_| QuartoError::FileExists)
+        Command::Init { force } => {
+            if Sqlite::database_exists(&db_url).await.unwrap_or(false) || force.unwrap_or(true) {
+                let result = init_sqlite(&db_url).await;
+                result.map(|_| ()).map_err(|_| QuartoError::FileExists);
+                return Ok(()); // XXX
+            } else {
+                return Ok(());
+            }
         }
         Command::NewGame => {
             let db: Pool<Sqlite> = SqlitePool::connect(&db_url).await.unwrap();
@@ -156,17 +163,21 @@ async fn main() -> Result<(), QuartoError> {
             if !((0..4).contains(&x) && (0..4).contains(&y)) {
                 return Err(QuartoError::AnyOther);
             }
-            if let Some(piece) = piece.into() {
-            } else {
-                return Err(QuartoError::AnyOther);
+            if let Some(piece_str) = piece.clone().into() {
+                if let Ok(piece) = Piece::try_from(piece_str) {
+                    // OK
+                } else {
+                    return Err(QuartoError::AnyOther);
+                }
             }
             println!("{:?}", uuid);
             let db: Pool<Sqlite> = SqlitePool::connect(&db_url).await.unwrap();
             if let Some(quarto) = Quarto::search_by_uuid(&db, &uuid).await {
                 println!("{:?}", quarto);
+            } else {
             }
             Ok(())
         }
     };
-    Ok(())
+    result
 }
