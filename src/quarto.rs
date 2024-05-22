@@ -1,8 +1,6 @@
-
 use std::collections::{HashMap, HashSet};
-use std::hash::Hash;
 use std::convert::TryFrom;
-
+use std::hash::Hash;
 
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
@@ -175,8 +173,6 @@ type CellState = Option<Piece>;
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct BoardState(Vec<Vec<CellState>>);
 
-
-
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Quarto {
     /* Only 4x4 board size is allowed */
@@ -187,18 +183,18 @@ pub struct Quarto {
 
 impl From<BoardState> for String {
     fn from(bs: BoardState) -> Self {
-        let vv = bs.0
-            .into_iter()
-            .map(|r| {
-                r.into_iter()
-                    .map(|c| c.map_or("    ".to_string(), |p| p.into()))
-                    .intersperse(" ".to_string())
-                    .collect()
-            })
-            .collect::<Vec<_>>()
-            .into_iter()
-            .intersperse("\n".to_string())
-            .collect();
+        let vv =
+            bs.0.into_iter()
+                .map(|r| {
+                    r.into_iter()
+                        .map(|c| c.map_or("    ".to_string(), |p| p.into()))
+                        .intersperse(" ".to_string())
+                        .collect()
+                })
+                .collect::<Vec<_>>()
+                .into_iter()
+                .intersperse("\n".to_string())
+                .collect();
         vv
     }
 }
