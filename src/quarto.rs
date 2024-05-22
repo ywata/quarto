@@ -16,6 +16,7 @@ use itertools::Itertools;
 pub enum QuartoError {
     InvalidPieceError,
     FileExists,
+    AnyOther,
 }
 
 /* Piece properties are ordered in enum name alphabetical order.

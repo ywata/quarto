@@ -25,6 +25,12 @@ struct Cli {
 enum Command {
     Init,
     NewGame,
+    Move {
+        uuid: String,
+        x: usize,
+        y: usize,
+        piece: String,
+    },
 }
 
 async fn init_sqlite(db_url: &str) -> Result<SqliteQueryResult, sqlx::Error> {
@@ -54,25 +60,25 @@ use sqlx::Error as SqlxError;
 impl From<SqlxError> for QuartoError {
     fn from(err: SqlxError) -> Self {
         match err {
-            SqlxError::Database(_) => QuartoError::InvalidPieceError,
-            SqlxError::Protocol(_) => QuartoError::InvalidPieceError,
-            SqlxError::PoolTimedOut => QuartoError::InvalidPieceError,
-            SqlxError::PoolClosed => QuartoError::InvalidPieceError,
-            SqlxError::WorkerCrashed => QuartoError::InvalidPieceError,
-            SqlxError::Migrate(_) => QuartoError::InvalidPieceError,
-            SqlxError::Configuration(_) => QuartoError::InvalidPieceError,
-            SqlxError::Tls(_) => QuartoError::InvalidPieceError,
-            SqlxError::Io(_) => QuartoError::InvalidPieceError,
-            SqlxError::Decode(_) => QuartoError::InvalidPieceError,
+            SqlxError::Database(_) => QuartoError::AnyOther,
+            SqlxError::Protocol(_) => QuartoError::AnyOther,
+            SqlxError::PoolTimedOut => QuartoError::AnyOther,
+            SqlxError::PoolClosed => QuartoError::AnyOther,
+            SqlxError::WorkerCrashed => QuartoError::AnyOther,
+            SqlxError::Migrate(_) => QuartoError::AnyOther,
+            SqlxError::Configuration(_) => QuartoError::AnyOther,
+            SqlxError::Tls(_) => QuartoError::AnyOther,
+            SqlxError::Io(_) => QuartoError::AnyOther,
+            SqlxError::Decode(_) => QuartoError::AnyOther,
             //SqlxError::Encode(_) => QuartoError::InvalidPieceError,
-            SqlxError::RowNotFound => QuartoError::InvalidPieceError,
+            SqlxError::RowNotFound => QuartoError::AnyOther,
             //SqlxError::ArgumentCount => QuartoError::InvalidPieceError,
-            SqlxError::ColumnIndexOutOfBounds { .. } => QuartoError::InvalidPieceError,
-            SqlxError::ColumnNotFound(_) => QuartoError::InvalidPieceError,
+            SqlxError::ColumnIndexOutOfBounds { .. } => QuartoError::AnyOther,
+            SqlxError::ColumnNotFound(_) => QuartoError::AnyOther,
             //SqlxError::Message(_) => QuartoError::InvalidPieceError,
             //SqlxError::NotFound => QuartoError::InvalidPieceError,
             //SqlxError::__Nonexhaustive => QuartoError::InvalidPieceError,
-            _ => QuartoError::InvalidPieceError,
+            _ => QuartoError::AnyOther,
         }
     }
 }
@@ -104,6 +110,25 @@ impl Quarto {
 
         ()
     }
+    async fn search_by_uuid(db: &Pool<Sqlite>, uuid: &str) -> Option<Quarto> {
+        #[cfg(not(feature = "init"))]
+        {
+            let result = sqlx::query!(
+                r#"
+                 SELECT uuid, next_piece, board_state, assigned_1st, assigned_2nd
+                 FROM game
+                 WHERE uuid = ?1
+                 "#,
+                uuid
+            )
+            .fetch_all(db)
+            .await;
+            println!("{:?}", result);
+            None
+        }
+        #[cfg(feature = "init")]
+        None
+    }
 }
 
 #[tokio::main]
@@ -124,7 +149,22 @@ async fn main() -> Result<(), QuartoError> {
             // We are sure BSCF is valid Piece.
             let first_piece: Piece = Piece::try_from("BSCF".to_string()).unwrap();
             let result = new_game.insert_new_game(&db, &uuid, &first_piece).await;
-
+            println!("{}", uuid);
+            Ok(())
+        }
+        Command::Move { uuid, x, y, piece } => {
+            if !((0..4).contains(&x) && (0..4).contains(&y)) {
+                return Err(QuartoError::AnyOther);
+            }
+            if let Some(piece) = piece.into() {
+            } else {
+                return Err(QuartoError::AnyOther);
+            }
+            println!("{:?}", uuid);
+            let db: Pool<Sqlite> = SqlitePool::connect(&db_url).await.unwrap();
+            if let Some(quarto) = Quarto::search_by_uuid(&db, &uuid).await {
+                println!("{:?}", quarto);
+            }
             Ok(())
         }
     };
