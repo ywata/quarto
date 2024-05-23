@@ -46,8 +46,8 @@ async fn init_sqlite(db_url: &str) -> Result<SqliteQueryResult, sqlx::Error> {
         (
               id INTEGER PRIMARY KEY,
               uuid VARCHAR,
-              assigned_1st BOOLEAN default false,
-              assigned_2nd BOOLEAN default false,
+              assigned_1st BOOLEAN NOT NULL default false,
+              assigned_2nd BOOLEAN NOT NULL default false,
               next_piece VARCHAR,
               board_state VARCHAR
         );"#,
@@ -112,7 +112,7 @@ impl Quarto {
 
         ()
     }
-    async fn search_by_uuid(db: &Pool<Sqlite>, uuid: &str) -> Option<Quarto> {
+    async fn search_game_by_uuid(db: &Pool<Sqlite>, uuid: &str) -> Option<Quarto> {
         #[cfg(not(feature = "init"))]
         {
             let result = sqlx::query!(
@@ -172,7 +172,7 @@ async fn main() -> Result<(), QuartoError> {
             }
             println!("{:?}", uuid);
             let db: Pool<Sqlite> = SqlitePool::connect(&db_url).await.unwrap();
-            if let Some(quarto) = Quarto::search_by_uuid(&db, &uuid).await {
+            if let Some(quarto) = Quarto::search_game_by_uuid(&db, &uuid).await {
                 println!("{:?}", quarto);
             } else {
             }
