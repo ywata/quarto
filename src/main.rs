@@ -34,6 +34,11 @@ enum Command {
         y: usize,
         piece: String,
     },
+    Quarto {
+        uuid: String,
+        x: usize,
+        y: usize,
+    },
 }
 
 async fn init_sqlite(db_url: &str) -> Result<SqliteQueryResult, sqlx::Error> {
@@ -178,6 +183,7 @@ async fn main() -> Result<(), QuartoError> {
             }
             Ok(())
         }
+        Command::Quarto { .. } => Ok(()),
     };
     result
 }
