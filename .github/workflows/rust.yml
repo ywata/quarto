@@ -46,7 +46,14 @@ jobs:
     - name: Run tests
       run: cargo test --verbose --features init
 
-    - name: sql init
+    - name: init
       run: cargo run --features init -- init
-    - name: sql new-game
-      run: cargo run -- new-game
+
+    - name: new-game
+      run: echo "UUID=$(cargo run -- new-game)" >> $GITHUB_ENV
+
+    - name: uuid
+      run: echo ${{ env.UUID }}
+
+    - name: move
+      run: cargo run -- move ${{ env.UUID }} 0 0 BSCH
