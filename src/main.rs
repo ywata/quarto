@@ -10,6 +10,8 @@ use std::convert::TryFrom;
 use std::env;
 use std::error::Error;
 
+use log::{debug, error, info, warn};
+
 use clap::{Parser, Subcommand};
 use uuid::Uuid;
 mod quarto;
@@ -25,7 +27,7 @@ struct Cli {
 enum Command {
     Init {
         #[arg(long)]
-        force: Option<bool>,
+        force: bool,
     },
     NewGame,
     Move {
@@ -34,13 +36,18 @@ enum Command {
         y: usize,
         piece: String,
     },
+    Quarto {
+        uuid: String,
+        x: usize,
+        y: usize,
+    },
 }
 
-async fn init_sqlite(db_url: &str) -> Result<SqliteQueryResult, sqlx::Error> {
+async fn init_sqlite(db_url: &str) -> Result<SqliteQueryResult, SqlxError> {
     Sqlite::create_database(db_url).await?;
 
     let db: Pool<Sqlite> = SqlitePool::connect(db_url).await.unwrap();
-    let result: Result<SqliteQueryResult, sqlx::Error> = sqlx::query(
+    sqlx::query(
         r#"
         CREATE TABLE IF NOT EXISTS game
         (
@@ -53,37 +60,10 @@ async fn init_sqlite(db_url: &str) -> Result<SqliteQueryResult, sqlx::Error> {
         );"#,
     )
     .execute(&db)
-    .await;
-    result
+    .await
 }
 
 use sqlx::Error as SqlxError;
-
-impl From<SqlxError> for QuartoError {
-    fn from(err: SqlxError) -> Self {
-        match err {
-            SqlxError::Database(_) => QuartoError::AnyOther,
-            SqlxError::Protocol(_) => QuartoError::AnyOther,
-            SqlxError::PoolTimedOut => QuartoError::AnyOther,
-            SqlxError::PoolClosed => QuartoError::AnyOther,
-            SqlxError::WorkerCrashed => QuartoError::AnyOther,
-            SqlxError::Migrate(_) => QuartoError::AnyOther,
-            SqlxError::Configuration(_) => QuartoError::AnyOther,
-            SqlxError::Tls(_) => QuartoError::AnyOther,
-            SqlxError::Io(_) => QuartoError::AnyOther,
-            SqlxError::Decode(_) => QuartoError::AnyOther,
-            //SqlxError::Encode(_) => QuartoError::InvalidPieceError,
-            SqlxError::RowNotFound => QuartoError::AnyOther,
-            //SqlxError::ArgumentCount => QuartoError::InvalidPieceError,
-            SqlxError::ColumnIndexOutOfBounds { .. } => QuartoError::AnyOther,
-            SqlxError::ColumnNotFound(_) => QuartoError::AnyOther,
-            //SqlxError::Message(_) => QuartoError::InvalidPieceError,
-            //SqlxError::NotFound => QuartoError::InvalidPieceError,
-            //SqlxError::__Nonexhaustive => QuartoError::InvalidPieceError,
-            _ => QuartoError::AnyOther,
-        }
-    }
-}
 
 impl Quarto {
     pub async fn insert_new_game(&mut self, db: &Pool<Sqlite>, uuid: &String, piece: &Piece) -> () {
@@ -107,7 +87,7 @@ impl Quarto {
             .execute(db)
             .await
             .unwrap();
-            print!("Insert record: {:?}", result);
+            info!("Insert record: {:?}", result);
         }
 
         ()
@@ -125,7 +105,7 @@ impl Quarto {
             )
             .fetch_all(db)
             .await;
-            println!("{:?}", result);
+            info!("{:?}", result);
             None
         }
         #[cfg(feature = "init")]
@@ -134,20 +114,18 @@ impl Quarto {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), QuartoError> {
+async fn main() -> Result<(), Box<dyn Error>> {
+    env_logger::init();
     let args = Cli::parse();
     let db_url = env::var("DATABASE_URL").expect("DATABASEURL should be set");
-    println!("{:?}", &args);
+    info!("{:?}", &args);
 
-    let result: Result<(), QuartoError> = match args.command {
+    let result: Result<(), Box<dyn Error>> = match args.command {
         Command::Init { force } => {
-            if Sqlite::database_exists(&db_url).await.unwrap_or(false) || force.unwrap_or(true) {
-                let result = init_sqlite(&db_url).await;
-                result.map(|_| ()).map_err(|_| QuartoError::FileExists);
-                return Ok(()); // XXX
-            } else {
-                return Ok(());
+            if Sqlite::database_exists(&db_url).await.unwrap_or(false) || force {
+                let _result = init_sqlite(&db_url).await;
             }
+            Ok(())
         }
         Command::NewGame => {
             let db: Pool<Sqlite> = SqlitePool::connect(&db_url).await.unwrap();
@@ -155,29 +133,34 @@ async fn main() -> Result<(), QuartoError> {
             let mut new_game = Quarto::new();
             // We are sure BSCF is valid Piece.
             let first_piece: Piece = Piece::try_from("BSCF".to_string()).unwrap();
-            let result = new_game.insert_new_game(&db, &uuid, &first_piece).await;
+            let _result = new_game.insert_new_game(&db, &uuid, &first_piece).await;
             println!("{}", uuid);
             Ok(())
         }
         Command::Move { uuid, x, y, piece } => {
             if !((0..4).contains(&x) && (0..4).contains(&y)) {
-                return Err(QuartoError::AnyOther);
+                error!("invalid coordinate: ({}, {})", &x, &y);
+                return Err(QuartoError::OutOfRange)?;
             }
             if let Some(piece_str) = piece.clone().into() {
-                if let Ok(piece) = Piece::try_from(piece_str) {
-                    // OK
-                } else {
-                    return Err(QuartoError::AnyOther);
+                if let Err(_) = Piece::try_from(piece_str.clone()) {
+                    info!("invalid piece: {}", &piece_str);
+                    return Err(QuartoError::OutOfRange)?;
                 }
+            } else {
+                error!("invalid piece: {}", &piece);
+                return Err(QuartoError::InvalidPieceError)?;
             }
-            println!("{:?}", uuid);
             let db: Pool<Sqlite> = SqlitePool::connect(&db_url).await.unwrap();
             if let Some(quarto) = Quarto::search_game_by_uuid(&db, &uuid).await {
-                println!("{:?}", quarto);
+                info!("{:?}", quarto);
+                return Ok(());
             } else {
+                error!("unknown uuid: {}", &uuid);
+                return Err(QuartoError::AnyOther)?;
             }
-            Ok(())
         }
+        Command::Quarto { .. } => Ok(()),
     };
-    result
+    Ok(())
 }
