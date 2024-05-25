@@ -47,7 +47,11 @@ jobs:
       run: cargo test --verbose --features init
 
     - name: init
-      run: cargo run --features init -- init
+      run: |
+        cargo run --features init -- init
+        # check if ${{ github.workspace }}/sqlite.db exists
+        ls ${{ github.workspace }}
+        test -f ${{ github.workspace }}/sqlite.db
 
     - name: new-game
       run: echo "UUID=$(cargo run -- new-game)" >> $GITHUB_ENV
