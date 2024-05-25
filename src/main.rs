@@ -27,7 +27,7 @@ struct Cli {
 enum Command {
     Init {
         #[arg(long)]
-        force: Option<bool>,
+        force: bool,
     },
     NewGame,
     Move {
@@ -122,7 +122,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let result: Result<(), Box<dyn Error>> = match args.command {
         Command::Init { force } => {
-            if Sqlite::database_exists(&db_url).await.unwrap_or(false) || force.unwrap_or(true) {
+            if Sqlite::database_exists(&db_url).await.unwrap_or(false) || force {
                 let _result = init_sqlite(&db_url).await;
             }
             Ok(())
