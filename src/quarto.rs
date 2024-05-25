@@ -16,6 +16,7 @@ use itertools::Itertools;
 pub enum QuartoError {
     InvalidPieceError,
     FileExists,
+    OutOfRange,
     AnyOther,
 }
 
