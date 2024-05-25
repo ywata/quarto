@@ -139,7 +139,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
         Command::Move { uuid, x, y, piece } => {
             if !((0..4).contains(&x) && (0..4).contains(&y)) {
-                info!("invalid coordinate: ({}, {})", &x, &y);
+                error!("invalid coordinate: ({}, {})", &x, &y);
                 return Err(QuartoError::OutOfRange)?;
             }
             if let Some(piece_str) = piece.clone().into() {
@@ -148,7 +148,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     return Err(QuartoError::OutOfRange)?;
                 }
             } else {
-                info!("invalid piece: {}", &piece);
+                error!("invalid piece: {}", &piece);
                 return Err(QuartoError::InvalidPieceError)?;
             }
             let db: Pool<Sqlite> = SqlitePool::connect(&db_url).await.unwrap();
@@ -156,7 +156,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 info!("{:?}", quarto);
                 return Ok(());
             } else {
-                info!("unknown uuid: {}", &uuid);
+                error!("unknown uuid: {}", &uuid);
                 return Err(QuartoError::AnyOther)?;
             }
         }
