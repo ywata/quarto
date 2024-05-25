@@ -10,6 +10,8 @@ use std::convert::TryFrom;
 use std::env;
 use std::error::Error;
 
+use log::{debug, error, info, warn};
+
 use clap::{Parser, Subcommand};
 use uuid::Uuid;
 mod quarto;
@@ -85,7 +87,7 @@ impl Quarto {
             .execute(db)
             .await
             .unwrap();
-            print!("Insert record: {:?}", result);
+            info!("Insert record: {:?}", result);
         }
 
         ()
@@ -103,7 +105,7 @@ impl Quarto {
             )
             .fetch_all(db)
             .await;
-            println!("{:?}", result);
+            info!("{:?}", result);
             None
         }
         #[cfg(feature = "init")]
@@ -112,10 +114,11 @@ impl Quarto {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error + 'static>> {
+async fn main() -> Result<(), Box<dyn Error>> {
+    env_logger::init();
     let args = Cli::parse();
     let db_url = env::var("DATABASE_URL").expect("DATABASEURL should be set");
-    println!("{:?}", &args);
+    info!("{:?}", &args);
 
     let result: Result<(), Box<dyn Error>> = match args.command {
         Command::Init { force } => {
@@ -136,22 +139,26 @@ async fn main() -> Result<(), Box<dyn Error + 'static>> {
         }
         Command::Move { uuid, x, y, piece } => {
             if !((0..4).contains(&x) && (0..4).contains(&y)) {
+                info!("invalid coordinate: ({}, {})", &x, &y);
                 return Err(QuartoError::OutOfRange)?;
             }
             if let Some(piece_str) = piece.clone().into() {
-                if let Err(_) = Piece::try_from(piece_str) {
+                if let Err(_) = Piece::try_from(piece_str.clone()) {
+                    info!("invalid piece: {}", &piece_str);
                     return Err(QuartoError::OutOfRange)?;
                 }
             } else {
+                info!("invalid piece: {}", &piece);
                 return Err(QuartoError::InvalidPieceError)?;
             }
-            println!("{:?}", uuid);
             let db: Pool<Sqlite> = SqlitePool::connect(&db_url).await.unwrap();
             if let Some(quarto) = Quarto::search_game_by_uuid(&db, &uuid).await {
-                println!("{:?}", quarto);
+                info!("{:?}", quarto);
+                return Ok(());
             } else {
+                info!("unknown uuid: {}", &uuid);
+                return Err(QuartoError::AnyOther)?;
             }
-            Ok(())
         }
         Command::Quarto { .. } => Ok(()),
     };
