@@ -175,12 +175,50 @@ type CellState = Option<Piece>;
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct BoardState(Vec<Vec<CellState>>);
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct Quarto {
-    /* Only 4x4 board size is allowed */
-    pub board_state: BoardState,
-    available_pieces: Vec<Piece>,
-    pub next_piece: Option<Piece>,
+impl TryFrom<&String> for BoardState {
+    type Error = QuartoError;
+    fn try_from(text: &String) -> Result<Self, Self::Error> {
+        let mut bs: Vec<Vec<CellState>> = vec![
+            vec![None, None, None, None],
+            vec![None, None, None, None],
+            vec![None, None, None, None],
+            vec![None, None, None, None],
+        ];
+        let lines: Vec<&str> = text.lines().collect();
+        if lines.len() != 4 {
+            return Err(QuartoError::InvalidPieceError);
+        }
+        let mut x: usize = 0;
+        let mut piece_count: HashMap<Piece, usize> = HashMap::new();
+        for line in lines {
+            if line.len() != 3 * (4 + 1) + 4 {
+                return Err(QuartoError::InvalidPieceError);
+            }
+
+            for y in 0..4 {
+                let piece_text = &line[5 * y..5 * y + 4];
+                bs[x][y] = Piece::try_from(piece_text.to_string()).ok();
+                if let Some(piece) = &bs[x][y] {
+                    if let Some(count) = piece_count.get(piece) {
+                        return Err(QuartoError::InvalidPieceError);
+                    } else {
+                        piece_count.insert(piece.clone(), 0);
+                    }
+                }
+
+                if y != 3 {
+                    let spacer = &line[5 * y + 4..5 * y + 5];
+                    if !spacer.eq(" ") {
+                        /* spacer can be any character but this makes board state normalized */
+                        return Err(QuartoError::InvalidPieceError);
+                    }
+                }
+            }
+
+            x += 1;
+        }
+        Ok(BoardState(bs))
+    }
 }
 
 impl From<BoardState> for String {
@@ -199,6 +237,15 @@ impl From<BoardState> for String {
                 .collect();
         vv
     }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct Quarto {
+    /* Only 4x4 board size is allowed */
+    /* A piece resides one of board_state, avaiable_pieces or next_piece */
+    pub board_state: BoardState,
+    free_pieces: Vec<Piece>,
+    pub next_piece: Option<Piece>,
 }
 
 fn all_pieces() -> Vec<Piece> {
@@ -220,15 +267,26 @@ fn all_pieces() -> Vec<Piece> {
     pieces
 }
 
+impl TryFrom<&String> for Quarto {
+    type Error = QuartoError;
+    fn try_from(text: &String) -> Result<Self, Self::Error> {
+        let mut quarto = Quarto::new();
+        let bs = BoardState::try_from(text)?;
+        quarto.free_pieces = Quarto::free_pieces(&bs);
+        quarto.board_state = bs;
+        Ok(quarto)
+    }
+}
+
 impl Quarto {
     pub fn new() -> Self {
         Quarto {
             board_state: BoardState(vec![vec![CellState::None; 4]; 4]),
-            available_pieces: all_pieces(),
+            free_pieces: all_pieces(),
             next_piece: None,
         }
     }
-    pub fn import(bs: BoardState, piece: Piece) -> Option<Self> {
+    fn free_pieces(bs: &BoardState) -> Vec<Piece> {
         let mut pieces = all_pieces();
         for row in &bs.0 {
             for cell in row {
@@ -237,11 +295,7 @@ impl Quarto {
                 }
             }
         }
-        Some(Quarto {
-            board_state: bs,
-            available_pieces: pieces,
-            next_piece: Some(piece),
-        })
+        pieces
     }
 
     fn count_elements<S: Clone + Eq + PartialEq + Hash>(
@@ -275,33 +329,27 @@ impl Quarto {
     }
 
     pub fn pick_piece(&mut self, p: &Piece) -> bool {
-        if self.available_pieces.contains(p) {
-            self.available_pieces.retain(|pc| *pc != *p);
+        if self.free_pieces.contains(p) {
+            self.free_pieces.retain(|pc| *pc != *p);
             self.next_piece = Some(p.clone());
             true
         } else {
             false
         }
     }
-    pub fn move_piece(&mut self, p: Piece, x: usize, y: usize) -> bool {
+    pub fn move_piece(&mut self, x: usize, y: usize) -> bool {
         if x >= 4 || y >= 4 {
             // Out of board access
             return false;
         }
         if let None = self.board_state.0[x][y] {
-            if let Some(p_) = &self.next_piece {
-                assert!(!self.available_pieces.contains(&p_));
-                if p == *p_ {
-                    self.board_state.0[x][y] = Some(p.clone());
-                    self.next_piece = None;
-                    return true;
-                } else {
-                    return false;
-                }
-            } else {
+            if let Some(p) = &self.next_piece {
+                assert!(!self.free_pieces.contains(&p));
                 self.board_state.0[x][y] = Some(p.clone());
-                self.available_pieces.retain(|piece| *piece != p);
+                self.next_piece = None;
                 return true;
+            } else {
+                return false;
             }
         } else {
             // A piece already occupies the position
@@ -376,63 +424,6 @@ impl Quarto {
 
         ret
     }
-    /*
-    pub fn format_board_state(board_state: Vec<Vec<Option<Piece>>>) -> String {
-        let mut ret = String::from("");
-        for col in board_state {
-            for cell in col {
-                let piece_str = match cell {
-                    None => "    ",
-                    Some(piece) => &<Piece as Into<String>>::into(piece),
-                };
-                ret.push_str(piece_str);
-            }
-            ret.push(' ');
-        }
-        let _ = ret.pop();
-        ret.to_string()
-    }*/
-    pub fn parse_board_text(text: &String) -> Option<Quarto> {
-        let mut quarto = Quarto::new();
-        let lines: Vec<&str> = text.lines().collect();
-        if lines.len() != 4 {
-            return None;
-        }
-        let mut x: usize = 0;
-        for line in lines {
-            if line.len() != 3 * (4 + 1) + 4 {
-                return None;
-            }
-
-            for y in 0..4 {
-                let piece_text = &line[5 * y..5 * y + 4];
-                if piece_text.eq("    ") {
-                    quarto.board_state.0[x][y] = None;
-                } else {
-                    let piece = Piece::try_from(piece_text.to_string()).ok()?;
-                    if quarto.available_pieces.contains(&piece) {
-                        if !quarto.move_piece(piece, x, y) {
-                            // use a piece multiple times
-                            return None;
-                        }
-                    } else {
-                        // The piece is already used in the board
-                        return None;
-                    }
-                }
-                if y != 3 {
-                    let spacer = &line[5 * y + 4..5 * y + 5];
-                    if !spacer.eq(" ") {
-                        /* spacer can be any character but this makes board state normalized */
-                        return None;
-                    }
-                }
-            }
-
-            x += 1;
-        }
-        Some(quarto)
-    }
 }
 
 #[cfg(test)]
@@ -448,7 +439,7 @@ mod test {
         assert_eq!(quarto.board_state.0[2].len(), 4);
         assert_eq!(quarto.board_state.0[3].len(), 4);
         assert_eq!(quarto.board_state.0[0][0], None);
-        assert_eq!(quarto.available_pieces.len(), 16);
+        assert_eq!(quarto.free_pieces.len(), 16);
     }
 
     #[test]
@@ -460,20 +451,22 @@ mod test {
            WSCF WSCH WSSF WSSH
            WTCF WTCH WTSF WTSH"#};
 
-        let quarto = Quarto::parse_board_text(&board_text.to_string());
+        let quarto = Quarto::try_from(&board_text.to_string()).ok();
         let board_text2: String = BoardState::from(quarto.unwrap().board_state).into();
         assert_eq!(board_text, board_text2)
     }
+
     #[test]
     fn test_parse_all_pieces() {
         /* WB TS SC HF */
         let board_text = indoc! {
         r#"BSCF BSCH BSSF BSSH
-           BTCF BTCH BTSF BTSH
-           WSCF WSCH WSSF WSSH
-           WTCF WTCH WTSF WTSH"#};
+               BTCF BTCH BTSF BTSH
+               WSCF WSCH WSSF WSSH
+               WTCF WTCH WTSF WTSH"#};
 
-        let quarto = Quarto::parse_board_text(&board_text.to_string());
+        let quarto = Quarto::try_from(&board_text.to_string()).ok();
+        assert_ne!(quarto, None);
 
         let expected = vec![
             vec![
@@ -582,7 +575,7 @@ mod test {
             ],
         ];
         assert_eq!(expected, quarto.clone().unwrap().board_state.0);
-        assert_eq!(quarto.unwrap().available_pieces.len(), 0)
+        assert_eq!(quarto.unwrap().free_pieces.len(), 0)
     }
     #[test]
     fn test_use_a_piece_multiple_times() {
@@ -593,22 +586,21 @@ mod test {
            WSCF WSCH WSSF WSSH
            WTCF WTCH WTSF BSCF"#};
 
-        let quarto = Quarto::parse_board_text(&board_text.to_string());
+        let quarto = Quarto::try_from(&board_text.to_string()).ok();
         assert_eq!(quarto, None)
     }
-
     #[test]
     fn test_empty_board() {
         let dummy_text = indoc! {
         /* - will be replaced to space */
         r#"
-            ---- ---- ---- ----
-            ---- ---- ---- ----
-            ---- ---- ---- ----
-            ---- ---- ---- ----"#};
+                 ---- ---- ---- ----
+                 ---- ---- ---- ----
+                 ---- ---- ---- ----
+                 ---- ---- ---- ----"#};
         let board_text = dummy_text.replace("-", " ");
 
-        let quarto = Quarto::parse_board_text(&board_text.to_string());
+        let quarto = Quarto::try_from(&board_text.to_string()).ok();
         let expected = vec![
             vec![None, None, None, None],
             vec![None, None, None, None],
@@ -616,7 +608,7 @@ mod test {
             vec![None, None, None, None],
         ];
         assert_eq!(expected, quarto.clone().unwrap().board_state.0);
-        assert_eq!(quarto.unwrap().available_pieces.len(), 16);
+        assert_eq!(quarto.unwrap().free_pieces.len(), 16);
     }
 
     #[test]
@@ -624,12 +616,12 @@ mod test {
         let dummy_text = indoc! {
         /* - will be replaced to space */
         r#"BSCF BSCH BSSF BSSH
-           ---- ---- ---- ----
-           ---- ---- ---- ----
-           ---- ---- ---- ----"#};
+              ---- ---- ---- ----
+              ---- ---- ---- ----
+              ---- ---- ---- ----"#};
         let board_text = dummy_text.replace("-", " ");
 
-        let quarto = &mut Quarto::parse_board_text(&board_text.to_string()).unwrap();
+        let quarto = &mut Quarto::try_from(&board_text.to_string()).unwrap();
         let r = quarto.parse_quarto(vec![
             vec![(0, 0), (0, 1), (0, 2), (0, 3)],
             vec![(0, 0), (1, 0), (2, 0), (3, 0)],
@@ -647,13 +639,13 @@ mod test {
         let dummy_text = indoc! {
         /* - will be replaced to space */
         r#"
-            ---- ---- ---- ----
-            ---- ---- ---- ----
-            ---- ---- ---- ----
-            ---- ---- ---- ----"#};
+               ---- ---- ---- ----
+               ---- ---- ---- ----
+               ---- ---- ---- ----
+               ---- ---- ---- ----"#};
         let board_text = dummy_text.replace("-", " ");
 
-        let quarto = &mut Quarto::parse_board_text(&board_text.to_string()).unwrap();
+        let quarto = &mut Quarto::try_from(&board_text.to_string()).unwrap();
         let expected: Vec<Vec<Option<Piece>>> = vec![
             vec![None, None, None, None],
             vec![None, None, None, None],
@@ -673,7 +665,7 @@ mod test {
         assert_eq!(succeess, true);
         let fail = quarto.pick_piece(&bscf);
         assert_eq!(fail, false);
-        let success = quarto.move_piece(bscf, 0, 0);
+        let success = quarto.move_piece(0, 0);
         assert_eq!(success, true);
 
         let expected = vec![
@@ -708,16 +700,16 @@ mod test {
         };
         let success = quarto.pick_piece(&bssf);
         assert!(success);
-        let fail = quarto.move_piece(bsch, 0, 2);
-        assert!(!fail);
+        let success = quarto.move_piece(0, 2);
+        assert!(success);
     }
 
     #[test]
     fn test_judge_quatro() {
         let _board_text = indoc! {
         r#"BSCF WWSB BSSW WWSB
-           BSSW WWSB BSSW WWSB
-           BSSW WWSB BSSW WWSB
-           BSSW WWSB BSSW WWSB"#};
+              BSSW WWSB BSSW WWSB
+              BSSW WWSB BSSW WWSB
+              BSSW WWSB BSSW WWSB"#};
     }
 }

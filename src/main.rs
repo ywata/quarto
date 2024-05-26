@@ -107,12 +107,12 @@ impl Quarto {
             .await
             .ok()?;
             if let (Some(bs), Some(np)) = (&result.board_state, &result.next_piece) {
-                let np = Piece::try_from(np.to_string());
-                let q = Quarto::parse_board_text(bs);
-                if let (Ok(np), Some(q)) = (np, q) {
-                    let quarto = Quarto::import(q.board_state, np);
-                    return quarto;
+                let np = Piece::try_from(np.to_string()).ok()?;
+                let mut q = Quarto::try_from(bs).ok()?;
+                if !q.pick_piece(&np) {
+                    return None;
                 }
+                return Some(q);
             }
             None
         }
@@ -150,18 +150,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 error!("invalid coordinate: ({}, {})", &x, &y);
                 return Err(QuartoError::OutOfRange)?;
             }
-            if let Some(piece_str) = piece.clone().into() {
-                if let Err(_) = Piece::try_from(piece_str.clone()) {
-                    info!("invalid piece: {}", &piece_str);
-                    return Err(QuartoError::OutOfRange)?;
-                }
-            } else {
+            if let None = piece.clone().into() {
                 error!("invalid piece: {}", &piece);
                 return Err(QuartoError::InvalidPieceError)?;
             }
             let db: Pool<Sqlite> = SqlitePool::connect(&db_url).await.unwrap();
-            if let Some(quarto) = Quarto::search_game_by_uuid(&db, &uuid).await {
+            let np = Piece::try_from(piece.clone())?;
+            if let Some(mut quarto) = Quarto::search_game_by_uuid(&db, &uuid).await {
                 info!("{:?}", quarto);
+                quarto.move_piece(x, y);
+                quarto.pick_piece(&np);
                 return Ok(());
             } else {
                 error!("unknown uuid: {}", &uuid);
