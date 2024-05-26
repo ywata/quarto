@@ -228,6 +228,21 @@ impl Quarto {
             next_piece: None,
         }
     }
+    pub fn import(bs: BoardState, piece: Piece) -> Option<Self> {
+        let mut pieces = all_pieces();
+        for row in &bs.0 {
+            for cell in row {
+                if let Some(a_piece) = cell {
+                    pieces.retain(|x| *x != *a_piece);
+                }
+            }
+        }
+        Some(Quarto {
+            board_state: bs,
+            available_pieces: pieces,
+            next_piece: Some(piece),
+        })
+    }
 
     fn count_elements<S: Clone + Eq + PartialEq + Hash>(
         &self,

@@ -103,9 +103,17 @@ impl Quarto {
                  "#,
                 uuid
             )
-            .fetch_all(db)
-            .await;
-            info!("{:?}", result);
+            .fetch_one(db)
+            .await
+            .ok()?;
+            if let (Some(bs), Some(np)) = (&result.board_state, &result.next_piece) {
+                let np = Piece::try_from(np.to_string());
+                let q = Quarto::parse_board_text(bs);
+                if let (Ok(np), Some(q)) = (np, q) {
+                    let quarto = Quarto::import(q.board_state, np);
+                    return quarto;
+                }
+            }
             None
         }
         #[cfg(feature = "init")]
