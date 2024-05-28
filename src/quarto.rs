@@ -17,6 +17,7 @@ pub enum QuartoError {
     InvalidPieceError,
     FileExists,
     OutOfRange,
+    InvalidQuarto,
     AnyOther,
 }
 
@@ -357,7 +358,7 @@ impl Quarto {
         }
     }
 
-    fn is_quarto<S: Eq + PartialEq + Hash>(ls: &(bool, HashMap<S, usize>)) -> bool {
+    fn check_quarto<S: Eq + PartialEq + Hash>(ls: &(bool, HashMap<S, usize>)) -> bool {
         let set = ls.1.values().collect::<HashSet<_>>();
         !ls.0 && set.contains(&(4 as usize))
     }
@@ -375,10 +376,10 @@ impl Quarto {
         let r = vv
             .into_iter()
             .filter(|(_, (cls, hls, sls, tls))| {
-                Self::is_quarto(cls)
-                    || Self::is_quarto(hls)
-                    || Self::is_quarto(sls)
-                    || Self::is_quarto(tls)
+                Self::check_quarto(cls)
+                    || Self::check_quarto(hls)
+                    || Self::check_quarto(sls)
+                    || Self::check_quarto(tls)
             })
             .collect::<Vec<_>>()
             .into_iter()
@@ -386,8 +387,24 @@ impl Quarto {
             .collect::<Vec<_>>();
         r
     }
+    pub fn is_quarto(&self) -> bool {
+        let vs = self.parse_quarto(vec![
+            vec![(0, 0), (0, 1), (0, 2), (0, 3)],
+            vec![(1, 0), (1, 1), (1, 2), (1, 3)],
+            vec![(2, 0), (2, 1), (2, 2), (2, 3)],
+            vec![(3, 0), (3, 1), (3, 2), (3, 3)],
+            vec![(0, 0), (1, 0), (2, 0), (3, 0)],
+            vec![(0, 1), (1, 1), (2, 1), (3, 1)],
+            vec![(0, 2), (1, 2), (2, 2), (3, 2)],
+            vec![(0, 3), (1, 3), (2, 3), (3, 3)],
+            vec![(0, 0), (1, 1), (2, 2), (3, 3)],
+            vec![(3, 0), (2, 1), (1, 2), (0, 3)],
+        ]);
+        let res = Self::summarize(&vs);
+        res.len() > 0
+    }
 
-    pub fn parse_quarto(
+    fn parse_quarto(
         &self,
         coords_vec: Vec<Vec<(usize, usize)>>,
     ) -> Vec<(

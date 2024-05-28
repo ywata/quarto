@@ -146,7 +146,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             Ok(())
         }
         Command::Move { uuid, x, y, piece } => {
-            if !((0..4).contains(&x) && (0..4).contains(&y)) {
+            let coord = parse_coord(&x, &y);
+            if let None = coord {
                 error!("invalid coordinate: ({}, {})", &x, &y);
                 return Err(QuartoError::OutOfRange)?;
             }
@@ -166,7 +167,36 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 return Err(QuartoError::AnyOther)?;
             }
         }
-        Command::Quarto { .. } => Ok(()),
+        Command::Quarto { uuid, x, y } => {
+            let coord = parse_coord(&x, &y);
+            if let None = coord {
+                error!("invalid coordinate: ({}, {})", &x, &y);
+                return Err(QuartoError::OutOfRange)?;
+            }
+            let db: Pool<Sqlite> = SqlitePool::connect(&db_url).await.unwrap();
+            if let Some(mut quarto) = Quarto::search_game_by_uuid(&db, &uuid).await {
+                info!("{:?}", quarto);
+                quarto.move_piece(x, y);
+                if quarto.is_quarto() {
+                    return Ok(());
+                } else {
+                    return Err(QuartoError::InvalidQuarto)?;
+                }
+
+                return Ok(());
+            } else {
+                error!("unknown uuid: {}", &uuid);
+                return Err(QuartoError::AnyOther)?;
+            }
+        }
     };
     Ok(())
+}
+
+fn parse_coord<'a>(x: &'a usize, y: &'a usize) -> Option<(&'a usize, &'a usize)> {
+    if !((0..4).contains(x) && (0..4).contains(y)) {
+        return Some((x, y));
+    } else {
+        None
+    }
 }
