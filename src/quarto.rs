@@ -362,7 +362,7 @@ impl Quarto {
         let set = ls.1.values().collect::<HashSet<_>>();
         !ls.0 && set.contains(&(4 as usize))
     }
-    pub fn summarize(
+    fn summarize(
         vv: &Vec<(
             Vec<(usize, usize)>,
             (
@@ -629,26 +629,93 @@ mod test {
     }
 
     #[test]
-    fn test_parse_quarto() {
+    fn test_is_quarto() {
         let dummy_text = indoc! {
         /* - will be replaced to space */
-        r#"BSCF BSCH BSSF BSSH
-              ---- ---- ---- ----
-              ---- ---- ---- ----
-              ---- ---- ---- ----"#};
+        r#"BSCF BSCH BSSF WTSH
+           ---- ---- ---- ----
+           ---- ---- ---- ----
+           ---- ---- ---- ----"#};
         let board_text = dummy_text.replace("-", " ");
 
         let quarto = &mut Quarto::try_from(&board_text.to_string()).unwrap();
-        let r = quarto.parse_quarto(vec![
-            vec![(0, 0), (0, 1), (0, 2), (0, 3)],
-            vec![(0, 0), (1, 0), (2, 0), (3, 0)],
-        ]);
-        assert_eq!(r[0].0, vec![(0, 0), (0, 1), (0, 2), (0, 3)]);
-        assert_eq!(r[1].0, vec![(0, 0), (1, 0), (2, 0), (3, 0)]);
+        let no_quarto = quarto.is_quarto();
+        assert!(!no_quarto);
 
-        let rr = Quarto::summarize(&r);
-        assert!(rr.len() == 1);
-        assert_eq!(rr[0], vec![(0, 0), (0, 1), (0, 2), (0, 3)]);
+        let dummy_texts = vec![
+            indoc! {
+            r#"BSCF BSCH BSSF BTSH
+                   ---- ---- ---- ----
+                   ---- ---- ---- ----
+                   ---- ---- ---- ----"#},
+            indoc! {
+            r#"---- ---- ---- ----
+                   BSCF BSCH BSSF BTSH
+                   ---- ---- ---- ----
+                   ---- ---- ---- ----"#},
+            indoc! {
+                r#"---- ---- ---- ----
+                   ---- ---- ---- ----
+                   BSCF BSCH BSSF BTSH
+                   ---- ---- ---- ----"#
+            },
+            indoc! {
+                r#"---- ---- ---- ----
+                   ---- ---- ---- ----
+                   ---- ---- ---- ----
+                   BSCF BSCH BSSF BTSH"#
+            },
+            indoc! {
+                r#"BSCF ---- ---- ----
+                   ---- BSCH ---- ----
+                   ---- ---- BSSF ----
+                   ---- ---- ---- BTSH"#
+            },
+            indoc! {
+                r#"---- ---- ---- BTSH
+                   ---- ---- BSSF ----
+                   ---- BSCH ---- ----
+                   BTCF ---- ---- ----"#
+
+            },
+            indoc! {
+                r#"BSCF ---- ---- ----
+                   BSCH ---- ---- ----
+                   BSSF ---- ---- ----
+                   BTSH ---- ---- ----"#
+
+            },
+            indoc! {
+                r#"---- BSCF ---- ----
+                   ---- BSCH ---- ----
+                   ---- BSSF ---- ----
+                   ---- BTSH ---- ----"#
+
+            },
+            indoc! {
+                r#"---- ---- BSCF ----
+                   ---- ---- BSCH ----
+                   ---- ---- BSSF ----
+                   ---- ---- BTSH ----"#
+
+            },
+            indoc! {
+                r#"---- ---- ---- BSCF
+                   ---- ---- ---- BSCH
+                   ---- ---- ---- BSSF
+                   ---- ---- ---- BTSH"#
+
+            },
+        ];
+
+        for bt in dummy_texts {
+            let board_text = bt.replace("-", " ");
+
+            let quarto = &mut Quarto::try_from(&board_text.to_string()).unwrap();
+            let yes_quarto = quarto.is_quarto();
+
+            assert!(yes_quarto);
+        }
     }
 
     #[test]
@@ -713,14 +780,5 @@ mod test {
         assert!(success);
         let success = quarto.move_piece(0, 2);
         assert!(success);
-    }
-
-    #[test]
-    fn test_judge_quatro() {
-        let _board_text = indoc! {
-        r#"BSCF WWSB BSSW WWSB
-              BSSW WWSB BSSW WWSB
-              BSSW WWSB BSSW WWSB
-              BSSW WWSB BSSW WWSB"#};
     }
 }
