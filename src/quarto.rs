@@ -199,7 +199,7 @@ impl TryFrom<&String> for BoardState {
                 let piece_text = &line[5 * y..5 * y + 4];
                 bs[x][y] = Piece::try_from(piece_text.to_string()).ok();
                 if let Some(piece) = &bs[x][y] {
-                    if let Some(count) = piece_count.get(piece) {
+                    if let Some(_count) = piece_count.get(piece) {
                         return Err(QuartoError::InvalidPieceError);
                     } else {
                         piece_count.insert(piece.clone(), 0);
@@ -691,12 +691,6 @@ mod test {
             height: Height::Short,
             shape: Shape::Square,
             top: Top::Flat,
-        };
-        let bsch = Piece {
-            color: Color::Brown,
-            height: Height::Short,
-            shape: Shape::Circle,
-            top: Top::Hole,
         };
         let success = quarto.pick_piece(&bssf);
         assert!(success);

@@ -131,7 +131,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let result: Result<(), Box<dyn Error>> = match args.command {
         Command::Init { force } => {
             if !Sqlite::database_exists(&db_url).await.unwrap_or(false) || force {
-                let result = init_sqlite(&db_url).await?;
+                let _result = init_sqlite(&db_url).await?;
             }
             Ok(())
         }
