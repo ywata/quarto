@@ -1,4 +1,4 @@
-#![cfg_attr(feature = "nightly", feature(iter_intersperse))]
+#![feature(iter_intersperse)]
 
 use crate::quarto::BoardState;
 use crate::quarto::{Piece, Quarto, QuartoError};
@@ -10,7 +10,7 @@ use std::convert::TryFrom;
 use std::env;
 use std::error::Error;
 
-use log::{debug, error, info, warn};
+use log::{error, info};
 
 use clap::{Parser, Subcommand};
 use uuid::Uuid;
@@ -182,15 +182,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 } else {
                     return Err(QuartoError::InvalidQuarto)?;
                 }
-
-                return Ok(());
             } else {
                 error!("unknown uuid: {}", &uuid);
                 return Err(QuartoError::AnyOther)?;
             }
         }
     };
-    Ok(())
+    result
 }
 
 fn parse_coord<'a>(x: &'a usize, y: &'a usize) -> Option<(&'a usize, &'a usize)> {

@@ -9,9 +9,6 @@ use strum_macros::EnumIter;
 
 use thiserror::Error;
 
-#[cfg(not(feature = "nightly"))]
-use itertools::Itertools;
-
 #[derive(Debug, Display, Error)]
 pub enum QuartoError {
     InvalidPieceError,
