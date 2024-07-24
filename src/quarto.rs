@@ -23,7 +23,7 @@ pub enum QuartoError {
    It is used to represent board state as Text.
 */
 
-#[derive(Clone, Debug, EnumIter, Eq, Hash, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Copy, Debug, EnumIter, Eq, Hash, Deserialize, Serialize, PartialEq)]
 pub enum Color {
     Brown,
     White,
@@ -49,7 +49,7 @@ impl TryFrom<&str> for Color {
     }
 }
 
-#[derive(Clone, Debug, EnumIter, Eq, Hash, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Copy, Debug, EnumIter, Eq, Hash, Deserialize, Serialize, PartialEq)]
 pub enum Height {
     Short,
     Tall,
@@ -75,7 +75,7 @@ impl TryFrom<&str> for Height {
     }
 }
 
-#[derive(Clone, Debug, EnumIter, Eq, Hash, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Copy, Debug, EnumIter, Eq, Hash, Deserialize, Serialize, PartialEq)]
 pub enum Shape {
     Circle,
     Square,
@@ -101,7 +101,7 @@ impl TryFrom<&str> for Shape {
     }
 }
 
-#[derive(Clone, Debug, EnumIter, Eq, Hash, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Copy, Debug, EnumIter, Eq, Hash, Deserialize, Serialize, PartialEq)]
 pub enum Top {
     Flat,
     Hole,
@@ -127,7 +127,7 @@ impl TryFrom<&str> for Top {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, Hash, Serialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Serialize, PartialEq)]
 pub struct Piece {
     color: Color,
     height: Height,
@@ -171,17 +171,18 @@ impl TryFrom<String> for Piece {
 /* Nothing corresponded to empty cell */
 type CellState = Option<Piece>;
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-pub struct BoardState(Vec<Vec<CellState>>);
+pub struct BoardState([[CellState; 4]; 4]);
 
 impl TryFrom<&String> for BoardState {
     type Error = QuartoError;
     fn try_from(text: &String) -> Result<Self, Self::Error> {
-        let mut bs: Vec<Vec<CellState>> = vec![
-            vec![None, None, None, None],
-            vec![None, None, None, None],
-            vec![None, None, None, None],
-            vec![None, None, None, None],
+        let mut bs = [
+            [None, None, None, None],
+            [None, None, None, None],
+            [None, None, None, None],
+            [None, None, None, None],
         ];
+
         let lines: Vec<&str> = text.lines().collect();
         if lines.len() != 4 {
             return Err(QuartoError::InvalidPieceError);
@@ -279,7 +280,7 @@ impl TryFrom<&String> for Quarto {
 impl Quarto {
     pub fn new() -> Self {
         Quarto {
-            board_state: BoardState(vec![vec![CellState::None; 4]; 4]),
+            board_state: BoardState([[CellState::None; 4]; 4]),
             free_pieces: all_pieces(),
             next_piece: None,
         }
