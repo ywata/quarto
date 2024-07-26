@@ -222,18 +222,16 @@ impl TryFrom<&String> for BoardState {
 
 impl From<BoardState> for String {
     fn from(bs: BoardState) -> Self {
-        let vv =
+        let vv: String =
             bs.0.into_iter()
                 .map(|r| {
                     r.into_iter()
-                        .map(|c| c.map_or("    ".to_string(), |p| p.into()))
-                        .intersperse(" ".to_string())
-                        .collect()
+                        .map(|c| c.map_or("    ".to_string(), Into::into))
+                        .collect::<Vec<_>>()
+                        .join(" ")
                 })
                 .collect::<Vec<_>>()
-                .into_iter()
-                .intersperse("\n".to_string())
-                .collect();
+                .join("\n");
         vv
     }
 }

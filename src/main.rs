@@ -1,5 +1,3 @@
-#![feature(iter_intersperse)]
-
 use crate::quarto::BoardState;
 use crate::quarto::{Piece, Quarto, QuartoError};
 use sqlx::sqlite::SqliteQueryResult;
