@@ -190,7 +190,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn parse_coord<'a>(x: &'a usize, y: &'a usize) -> Option<(&'a usize, &'a usize)> {
-    if !((0..4).contains(x) && (0..4).contains(y)) {
+    if (0..4).contains(x) && (0..4).contains(y) {
         return Some((x, y));
     } else {
         None
