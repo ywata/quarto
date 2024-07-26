@@ -297,7 +297,7 @@ impl Quarto {
 
     fn count_elements<S: Clone + Eq + PartialEq + Hash>(
         &self,
-        coords: &Vec<(usize, usize)>,
+        coords: &[(usize, usize); 4],
         prop: fn(Piece) -> S,
     ) -> (bool, HashMap<Option<S>, usize>) {
         let picked: Vec<_> = coords
@@ -360,7 +360,7 @@ impl Quarto {
     }
     fn summarize(
         vv: &Vec<(
-            Vec<(usize, usize)>,
+            [(usize, usize); 4],
             (
                 (bool, HashMap<Option<Color>, usize>),
                 (bool, HashMap<Option<Height>, usize>),
@@ -368,7 +368,7 @@ impl Quarto {
                 (bool, HashMap<Option<Top>, usize>),
             ),
         )>,
-    ) -> Vec<Vec<(usize, usize)>> {
+    ) -> Vec<[(usize, usize); 4]> {
         let r = vv
             .into_iter()
             .filter(|(_, (cls, hls, sls, tls))| {
@@ -385,16 +385,16 @@ impl Quarto {
     }
     pub fn is_quarto(&self) -> bool {
         let vs = self.parse_quarto(vec![
-            vec![(0, 0), (0, 1), (0, 2), (0, 3)],
-            vec![(1, 0), (1, 1), (1, 2), (1, 3)],
-            vec![(2, 0), (2, 1), (2, 2), (2, 3)],
-            vec![(3, 0), (3, 1), (3, 2), (3, 3)],
-            vec![(0, 0), (1, 0), (2, 0), (3, 0)],
-            vec![(0, 1), (1, 1), (2, 1), (3, 1)],
-            vec![(0, 2), (1, 2), (2, 2), (3, 2)],
-            vec![(0, 3), (1, 3), (2, 3), (3, 3)],
-            vec![(0, 0), (1, 1), (2, 2), (3, 3)],
-            vec![(3, 0), (2, 1), (1, 2), (0, 3)],
+            [(0, 0), (0, 1), (0, 2), (0, 3)],
+            [(1, 0), (1, 1), (1, 2), (1, 3)],
+            [(2, 0), (2, 1), (2, 2), (2, 3)],
+            [(3, 0), (3, 1), (3, 2), (3, 3)],
+            [(0, 0), (1, 0), (2, 0), (3, 0)],
+            [(0, 1), (1, 1), (2, 1), (3, 1)],
+            [(0, 2), (1, 2), (2, 2), (3, 2)],
+            [(0, 3), (1, 3), (2, 3), (3, 3)],
+            [(0, 0), (1, 1), (2, 2), (3, 3)],
+            [(3, 0), (2, 1), (1, 2), (0, 3)],
         ]);
         let res = Self::summarize(&vs);
         res.len() > 0
@@ -402,9 +402,9 @@ impl Quarto {
 
     fn parse_quarto(
         &self,
-        coords_vec: Vec<Vec<(usize, usize)>>,
+        coords_vec: Vec<[(usize, usize); 4]>,
     ) -> Vec<(
-        Vec<(usize, usize)>,
+        [(usize, usize); 4],
         (
             (bool, HashMap<Option<Color>, usize>),
             (bool, HashMap<Option<Height>, usize>),
@@ -413,7 +413,7 @@ impl Quarto {
         ),
     )> {
         let mut ret: Vec<(
-            Vec<(usize, usize)>,
+            [(usize, usize); 4],
             (
                 (bool, HashMap<Option<Color>, usize>),
                 (bool, HashMap<Option<Height>, usize>),
