@@ -54,6 +54,11 @@ jobs:
         ls ${{ github.workspace }}
         test -f ${{ github.workspace }}/sqlite.db
 
+    - name: check db
+      run: |
+        echo $DATABASE_URL
+        ls -l ${{ github.workspace }}
+
     - name: new-game
       run: echo "UUID=$(cargo run -- new-game)" >> $GITHUB_ENV
 
