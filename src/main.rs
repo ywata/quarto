@@ -123,7 +123,7 @@ impl Quarto {
 async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
     let args = Cli::parse();
-    let db_url = env::var("DATABASE_URL").expect("DATABASEURL should be set");
+    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL should be set");
     info!("{:?}", &args);
 
     let result: Result<(), Box<dyn Error>> = match args.command {
